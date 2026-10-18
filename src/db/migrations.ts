@@ -44,4 +44,8 @@ export const migrations: string[] = [
     ('switch', 'Nintendo Switch', 'Switch', 0, 50),
     ('pc', 'PC', 'PC', 1, 60);
   `,
+  `
+  DELETE FROM copies WHERE game_id IN (SELECT id FROM games WHERE igdb_id IS NULL);
+  DELETE FROM games WHERE igdb_id IS NULL;
+  `,
 ];

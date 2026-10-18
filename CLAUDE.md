@@ -10,7 +10,7 @@ One log of every game you play, on every platform, filled in for you and rated y
 - `expo-router`. Tabs: iOS uses system `NativeTabs` (`src/app/(tabs)/_layout.tsx`); Android uses headless tabs (`expo-router/ui`) with our floating glass bar (`_layout.android.tsx`, `src/components/tab-bar/`)
 - Native UI: `@expo/ui` (SwiftUI / Jetpack Compose), `expo-glass-effect` on iOS, our `questlog-glass` Expo module on Android (`modules/questlog-glass`)
 - Backend (planned): Supabase free tier (Postgres, Auth, Edge Functions + `pg_cron`, Vault); IGDB catalog and image CDN
-- Data: local-first SQLite via `expo-sqlite` (`src/db/`), synced to Postgres later. Schema changes are new entries appended to `src/db/migrations.ts` (tracked by `PRAGMA user_version`), never edits to shipped ones. Screens read through `useLiveQuery` so writes refresh them automatically. Dev builds seed sample games into an empty database (`src/db/seed.ts`)
+- Data: local-first SQLite via `expo-sqlite` (`src/db/`), synced to Postgres later. Schema changes are new entries appended to `src/db/migrations.ts` (tracked by `PRAGMA user_version`), never edits to shipped ones. Screens read through `useLiveQuery` so writes refresh them automatically.
 
 ## UI rules
 

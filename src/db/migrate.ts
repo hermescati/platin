@@ -1,7 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { migrations } from '@/db/migrations';
-import { seedIfEmpty } from '@/db/seed';
 
 export const migrate = async (db: SQLiteDatabase) => {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
@@ -14,9 +13,5 @@ export const migrate = async (db: SQLiteDatabase) => {
       await txn.execAsync(migrations[version]);
       await txn.execAsync(`PRAGMA user_version = ${version + 1}`);
     });
-  }
-
-  if (__DEV__) {
-    await seedIfEmpty(db);
   }
 };

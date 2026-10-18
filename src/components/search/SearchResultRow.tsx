@@ -1,20 +1,25 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { GameCover } from '@/components/library/GameCover';
-import { fontSize, layout, spacing } from '@/theme/tokens';
+import { fontSize, layout, opacity, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
   title: string;
   coverImageId: string | null;
   detail: string;
+  onPress?: () => void;
 }
 
-export const SearchResultRow = ({ title, coverImageId, detail }: Props) => {
+export const SearchResultRow = ({ title, coverImageId, detail, onPress }: Props) => {
   const { color } = useTheme();
 
   return (
-    <View style={styles.row}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      style={({ pressed }) => [styles.row, { opacity: pressed ? opacity.pressed : 1 }]}>
       <View style={styles.cover}>
         <GameCover title={title} coverImageId={coverImageId} />
       </View>
@@ -28,7 +33,7 @@ export const SearchResultRow = ({ title, coverImageId, detail }: Props) => {
           </Text>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 };
 

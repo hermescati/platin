@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -20,6 +21,7 @@ export const SearchResults = ({ query }: Props) => {
   const catalog = useCatalogSearch(query);
   const needle = query.trim().toLowerCase();
   const libraryMatches = (library ?? []).filter((game) => game.title.toLowerCase().includes(needle));
+  const owned = new Map((library ?? []).filter((game) => game.igdbId !== null).map((game) => [game.igdbId, game]));
 
   return (
     <Animated.ScrollView
@@ -47,14 +49,24 @@ export const SearchResults = ({ query }: Props) => {
       {!catalog.loading && !catalog.error && catalog.results.length === 0 && (
         <Text style={[styles.message, { color: color.textSecondary }]}>No games found</Text>
       )}
-      {catalog.results.map((game) => (
-        <SearchResultRow
-          key={game.id}
-          title={game.name}
-          coverImageId={game.coverId}
-          detail={[game.releaseYear, game.platforms.slice(0, 3).join(', ')].filter(Boolean).join(' · ')}
-        />
-      ))}
+      {catalog.results.map((game) => {
+        const entry = owned.get(game.id);
+        return (
+          <SearchResultRow
+            key={game.id}
+            title={game.name}
+            coverImageId={game.coverId}
+            detail={
+              entry
+                ? `In library · ${activityStatusLabels[entry.activityStatus]}`
+                : [game.releaseYear, game.platforms.slice(0, 3).join(', ')].filter(Boolean).join(' · ')
+            }
+            onPress={
+              entry ? undefined : () => router.push({ pathname: '/add-game', params: { game: JSON.stringify(game) } })
+            }
+          />
+        );
+      })}
     </Animated.ScrollView>
   );
 };

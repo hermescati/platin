@@ -65,7 +65,9 @@ export const palettes: Record<ColorSchemeName, Palette> = {
 
 export const spacing = { xxs: 2, xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
-export const radius = { sm: 6, md: 10, lg: 14, xl: 20, pill: 999 } as const;
+export const radius = { sm: 6, md: 10, lg: 14, xl: 20, sheet: 28, pill: 999 } as const;
+
+export const opacity = { pressed: 0.7, disabled: 0.5 } as const;
 
 export const fontSize = { xs: 11, sm: 13, md: 15, lg: 17, xl: 22, xxl: 28 } as const;
 
@@ -86,6 +88,7 @@ export const layout = {
   libraryColumns: 3,
   coverIconSize: 32,
   searchCoverWidth: 48,
+  sheetCoverWidth: 72,
 } as const;
 
 export const glass = {
