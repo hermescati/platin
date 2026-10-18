@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
+import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
 import { fontSize, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -10,12 +11,13 @@ interface Props {
 
 export const EmptyState = ({ title, description }: Props) => {
   const { color } = useTheme();
+  const tabBarInset = useTabBarInset();
 
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ backgroundColor: color.background }}
-      contentContainerStyle={styles.content}>
+      contentContainerStyle={[styles.content, { paddingBottom: tabBarInset }]}>
       <Text style={[styles.title, { color: color.textPrimary }]}>{title}</Text>
       <Text style={[styles.description, { color: color.textSecondary }]}>{description}</Text>
     </ScrollView>

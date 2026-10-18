@@ -1,30 +1,34 @@
-import { NativeTabs } from 'expo-router/native-tabs';
+import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
+import { StyleSheet } from 'react-native';
 
-import { useTheme } from '@/theme/useTheme';
+import { GlassBackdrop } from '@/components/glass/GlassBackdrop';
+import { GlassProvider } from '@/components/glass/GlassProvider';
+import { FloatingTabBar } from '@/components/tab-bar/FloatingTabBar';
+import { allTabs } from '@/components/tab-bar/tabs';
 
-const TabsLayout = () => {
-  const { color } = useTheme();
+const TabsLayout = () => (
+  <GlassProvider>
+    <Tabs style={styles.fill}>
+      <GlassBackdrop>
+        <TabSlot />
+      </GlassBackdrop>
+      <FloatingTabBar />
+      <TabList style={styles.hidden}>
+        {allTabs.map((tab) => (
+          <TabTrigger key={tab.name} name={tab.name} href={tab.href} />
+        ))}
+      </TabList>
+    </Tabs>
+  </GlassProvider>
+);
 
-  return (
-    <NativeTabs tintColor={color.accent}>
-      <NativeTabs.Trigger name="home">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="library">
-        <NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'square.stack', selected: 'square.stack.fill' }} md="stacks" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} md="account_circle" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="search" role="search">
-        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-};
+const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
+  hidden: {
+    display: 'none',
+  },
+});
 
 export default TabsLayout;
