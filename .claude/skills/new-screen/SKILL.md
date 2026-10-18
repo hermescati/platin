@@ -44,7 +44,7 @@ New tab:
 - Colours from `useTheme().color`, and spacing, radii and type from `@/theme/tokens`. No raw values. If a value is missing, add a token.
 - No `Platform.OS` branching for visuals. If a part looks different per platform, build it with the `platform-component` skill.
 - Arrow functions, a named `Props` interface, `@/` imports, default-exported screen component, no comments.
-- Only Expo Go bundled modules.
+- New native dependencies need a rebuild of the dev build; flag that before adding one.
 
 ## 4. Verify
 

@@ -37,6 +37,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1ce97ac8-85e7-4354-820c-3864f390d337"
+      }
+    },
+    "owner": "hermescati"
   }
 }
