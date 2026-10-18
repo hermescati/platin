@@ -12,3 +12,7 @@ export const completionTierLabels: Record<CompletionTier, string> = {
   completed: 'Completed',
   mastered: 'Mastered',
 };
+
+export const activityStatuses: ActivityStatus[] = ['playing', 'backlog', 'wishlist', 'dropped'];
+
+export const completionTiers: CompletionTier[] = ['beaten', 'completed', 'mastered'];

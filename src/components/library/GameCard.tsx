@@ -1,9 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { GameCover } from '@/components/library/GameCover';
 import { activityStatusLabels, completionTierLabels } from '@/components/library/labels';
 import type { LibraryGame } from '@/db/types';
-import { fontSize, spacing } from '@/theme/tokens';
+import { fontSize, opacity, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
@@ -17,7 +18,11 @@ export const GameCard = ({ game, width }: Props) => {
   const badge = game.completionTier ? completionTierLabels[game.completionTier] : undefined;
 
   return (
-    <View style={[styles.card, { width }]} accessible accessibilityLabel={`${game.title}, ${meta}`}>
+    <Pressable
+      onPress={() => router.push({ pathname: '/game/[id]', params: { id: game.id } })}
+      accessibilityRole="button"
+      accessibilityLabel={`${game.title}, ${meta}`}
+      style={({ pressed }) => [styles.card, { width, opacity: pressed ? opacity.pressed : 1 }]}>
       <GameCover title={game.title} coverImageId={game.coverImageId} badge={badge} />
       <View style={styles.text}>
         <Text style={[styles.title, { color: color.textPrimary }]} numberOfLines={2}>
@@ -27,7 +32,7 @@ export const GameCard = ({ game, width }: Props) => {
           {meta}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 };
 

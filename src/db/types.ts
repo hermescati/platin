@@ -17,3 +17,15 @@ export interface Platform {
   name: string;
   shortName: string;
 }
+
+export interface GameDetail {
+  id: string;
+  igdbId: number | null;
+  title: string;
+  coverImageId: string | null;
+  releaseYear: number | null;
+  activityStatus: ActivityStatus;
+  completionTier: CompletionTier | null;
+  platformIds: string[];
+  canMaster: boolean;
+}

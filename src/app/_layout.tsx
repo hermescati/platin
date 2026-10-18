@@ -1,16 +1,18 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 
+import { detailScreenOptions } from '@/components/navigation/detailScreenOptions';
 import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { radius } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 const RootLayout = () => {
-  const { scheme } = useTheme();
+  const { scheme, color } = useTheme();
 
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <DatabaseProvider>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="game/[id]" options={detailScreenOptions(color)} />
           <Stack.Screen
             name="add-game"
             options={{

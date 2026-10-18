@@ -7,6 +7,7 @@ export interface Palette {
   textPrimary: string;
   textSecondary: string;
   accent: string;
+  danger: string;
   glassTint: string;
   glassSheen: string;
   glassRimTop: string;
@@ -28,6 +29,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     textPrimary: '#0B0B0F',
     textSecondary: '#60646C',
     accent: '#5B5BD6',
+    danger: '#DC3E42',
     glassTint: 'rgba(255, 255, 255, 0.6)',
     glassSheen: 'rgba(255, 255, 255, 0.70)',
     glassRimTop: 'rgba(255, 255, 255, 0.85)',
@@ -48,6 +50,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     textPrimary: '#F5F5F7',
     textSecondary: '#B0B4BA',
     accent: '#9B9EF0',
+    danger: '#FF6369',
     glassTint: 'rgba(16, 16, 20, 0.62)',
     glassSheen: 'rgba(255, 255, 255, 0.04)',
     glassRimTop: 'rgba(255, 255, 255, 0.22)',
@@ -89,6 +92,7 @@ export const layout = {
   coverIconSize: 32,
   searchCoverWidth: 48,
   sheetCoverWidth: 72,
+  detailCoverWidth: 160,
 } as const;
 
 export const glass = {

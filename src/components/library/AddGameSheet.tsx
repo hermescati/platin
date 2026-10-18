@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GameCover } from '@/components/library/GameCover';
-import { activityStatusLabels } from '@/components/library/labels';
+import { activityStatuses, activityStatusLabels } from '@/components/library/labels';
 import { Chip } from '@/components/ui/Chip';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { addCatalogGame } from '@/db/library';
@@ -18,8 +18,6 @@ import { useTheme } from '@/theme/useTheme';
 interface Props {
   game: CatalogGame;
 }
-
-const statuses: ActivityStatus[] = ['playing', 'backlog', 'wishlist', 'dropped'];
 
 export const AddGameSheet = ({ game }: Props) => {
   const { color } = useTheme();
@@ -60,7 +58,7 @@ export const AddGameSheet = ({ game }: Props) => {
 
       <Text style={[styles.section, { color: color.textSecondary }]}>Status</Text>
       <View style={styles.chips}>
-        {statuses.map((value) => (
+        {activityStatuses.map((value) => (
           <Chip
             key={value}
             label={activityStatusLabels[value]}

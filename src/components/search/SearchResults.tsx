@@ -7,6 +7,7 @@ import { SearchResultRow } from '@/components/search/SearchResultRow';
 import { useCatalogSearch } from '@/components/search/useCatalogSearch';
 import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
 import { useLibrary } from '@/db/library';
+import type { CatalogGame } from '@/lib/catalog';
 import { fontSize, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -39,6 +40,7 @@ export const SearchResults = ({ query }: Props) => {
               title={game.title}
               coverImageId={game.coverImageId}
               detail={[activityStatusLabels[game.activityStatus], game.platforms].filter(Boolean).join(' · ')}
+              onPress={() => openGame(game.id)}
             />
           ))}
         </>
@@ -61,15 +63,17 @@ export const SearchResults = ({ query }: Props) => {
                 ? `In library · ${activityStatusLabels[entry.activityStatus]}`
                 : [game.releaseYear, game.platforms.slice(0, 3).join(', ')].filter(Boolean).join(' · ')
             }
-            onPress={
-              entry ? undefined : () => router.push({ pathname: '/add-game', params: { game: JSON.stringify(game) } })
-            }
+            onPress={() => (entry ? openGame(entry.id) : addGame(game))}
           />
         );
       })}
     </Animated.ScrollView>
   );
 };
+
+const openGame = (id: string) => router.push({ pathname: '/game/[id]', params: { id } });
+
+const addGame = (game: CatalogGame) => router.push({ pathname: '/add-game', params: { game: JSON.stringify(game) } });
 
 const styles = StyleSheet.create({
   content: {
