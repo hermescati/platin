@@ -1,9 +1,9 @@
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { GlassBackdrop } from '@/components/glass/GlassBackdrop';
+import { KeyboardRoot } from '@/components/keyboard/KeyboardRoot';
 import { SearchQueryProvider } from '@/components/search/SearchQuery';
 import { FloatingTabBar } from '@/components/tab-bar/FloatingTabBar';
 import { TabBarCollapseProvider } from '@/components/tab-bar/TabBarCollapse';
@@ -11,7 +11,7 @@ import { allTabs } from '@/components/tab-bar/tabs';
 
 const TabsLayout = () => (
   <GestureHandlerRootView style={styles.fill}>
-    <KeyboardProvider>
+    <KeyboardRoot>
       <SearchQueryProvider>
         <TabBarCollapseProvider>
           <Tabs style={styles.fill}>
@@ -27,7 +27,7 @@ const TabsLayout = () => (
           </Tabs>
         </TabBarCollapseProvider>
       </SearchQueryProvider>
-    </KeyboardProvider>
+    </KeyboardRoot>
   </GestureHandlerRootView>
 );
 

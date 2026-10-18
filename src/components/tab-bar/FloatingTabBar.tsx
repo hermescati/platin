@@ -4,7 +4,6 @@ import { useTabTrigger } from 'expo-router/ui';
 import { useEffect, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
   interpolateColor,
   useAnimatedProps,
@@ -21,6 +20,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedNativeGlassView, NativeGlassView } from '@/components/glass/NativeGlass';
 import { useGlassStyle } from '@/components/glass/useGlassStyle';
+import { useKeyboardHeight } from '@/components/keyboard/useKeyboardHeight';
 import { useSearchQuery } from '@/components/search/SearchQuery';
 import { SearchMode } from '@/components/tab-bar/SearchMode';
 import { setTabBarCollapsed, useTabBarCollapse } from '@/components/tab-bar/TabBarCollapse';
@@ -174,7 +174,7 @@ export const FloatingTabBar = () => {
   const focusedIndex = tabs.findIndex((tab) => getTrigger(tab.name)?.isFocused);
   const searchFocused = getTrigger(searchTab.name)?.isFocused ?? false;
   const { setQuery } = useSearchQuery();
-  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const keyboardHeight = useKeyboardHeight();
   const [backIndex, setBackIndex] = useState(Math.max(focusedIndex, 0));
   if (focusedIndex >= 0 && focusedIndex !== backIndex) {
     setBackIndex(focusedIndex);
