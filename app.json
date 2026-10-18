@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "questlog",
+    "name": "Questlog",
     "slug": "questlog",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,9 @@
     "scheme": "questlog",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "dev.questlog.app",
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
@@ -17,11 +19,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "server",
-      "favicon": "./assets/images/favicon.png"
+      "predictiveBackGestureEnabled": false,
+      "package": "dev.questlog.app"
     },
     "plugins": [
       "expo-router",
