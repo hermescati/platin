@@ -1,38 +1,56 @@
-import { BlurView } from 'expo-blur';
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
-import { useGlassTarget } from '@/components/glass/GlassProvider';
-import { glass, layout } from '@/theme/tokens';
-import { useTheme } from '@/theme/useTheme';
+import { NativeGlassView } from '@/components/glass/NativeGlass';
+import type { GlassTransform } from '@/components/glass/types';
+import { useGlassStyle } from '@/components/glass/useGlassStyle';
+import { glass } from '@/theme/tokens';
 
 interface Props {
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
+  radius?: number;
+  transform?: GlassTransform;
   interactive?: boolean;
 }
 
-export const GlassSurface = ({ children, style }: Props) => {
-  const { color } = useTheme();
-  const target = useGlassTarget();
+export const GlassSurface = ({ children, style, radius = 0, transform }: Props) => {
+  const glassStyle = useGlassStyle();
+
+  const shellStyle = useAnimatedStyle(() =>
+    transform
+      ? {
+          transform: [
+            { translateX: transform.translateX.get() },
+            { translateY: transform.translateY.get() },
+            { scaleX: transform.scaleX.get() },
+            { scaleY: transform.scaleY.get() },
+          ],
+        }
+      : {},
+  );
 
   return (
-    <View style={[styles.clip, { borderColor: color.glassBorder }, style]}>
-      <BlurView
-        blurTarget={target ?? undefined}
-        blurMethod={target ? 'dimezisBlurViewSdk31Plus' : 'none'}
-        intensity={glass.blurIntensity}
-        style={StyleSheet.absoluteFill}
+    <Animated.View style={[style, shellStyle]}>
+      <NativeGlassView
+        style={styles.glass}
+        pointerEvents="none"
+        inset={glass.pad}
+        cornerRadius={radius}
+        {...glassStyle}
       />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: color.glassTint }]} />
       {children}
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  clip: {
-    overflow: 'hidden',
-    borderWidth: layout.hairline,
+  glass: {
+    position: 'absolute',
+    top: -glass.pad,
+    left: -glass.pad,
+    right: -glass.pad,
+    bottom: -glass.pad,
   },
 });

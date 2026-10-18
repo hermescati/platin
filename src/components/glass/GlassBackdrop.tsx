@@ -1,22 +1,11 @@
-import { BlurTargetView } from 'expo-blur';
 import type { ReactNode } from 'react';
-import { StyleSheet } from 'react-native';
-
-import { useGlassTarget } from '@/components/glass/GlassProvider';
+import { StyleSheet, View } from 'react-native';
 
 interface Props {
   children: ReactNode;
 }
 
-export const GlassBackdrop = ({ children }: Props) => {
-  const target = useGlassTarget();
-
-  return (
-    <BlurTargetView ref={target ?? undefined} style={styles.fill}>
-      {children}
-    </BlurTargetView>
-  );
-};
+export const GlassBackdrop = ({ children }: Props) => <View style={styles.fill}>{children}</View>;
 
 const styles = StyleSheet.create({
   fill: {
