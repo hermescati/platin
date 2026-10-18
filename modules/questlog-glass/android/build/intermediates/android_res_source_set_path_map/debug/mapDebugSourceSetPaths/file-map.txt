@@ -1,9 +1,0 @@
-dev.questlog.glass.questlog-glass-pngs-0 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/build/generated/res/pngs/debug
-dev.questlog.glass.questlog-glass-updated_navigation_xml-1 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/build/generated/updated_navigation_xml/debug
-dev.questlog.glass.questlog-glass-mergeDebugResources-2 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
-dev.questlog.glass.questlog-glass-mergeDebugResources-3 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
-dev.questlog.glass.questlog-glass-debug-4 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/build/intermediates/merged_res/debug/mergeDebugResources
-dev.questlog.glass.questlog-glass-debug-5 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/build/intermediates/packaged_res/debug/packageDebugResources
-dev.questlog.glass.questlog-glass-debug-6 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/src/debug/res
-dev.questlog.glass.questlog-glass-main-7 /Users/hermescati/Desktop/Projects/questlog/modules/questlog-glass/android/src/main/res
-gradleHome-0 /Users/hermescati/.gradle

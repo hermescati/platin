@@ -1,6 +1,6 @@
 ---
 name: new-screen
-description: Scaffold a Questlog screen, either a new tab in the floating tab bar or a screen pushed inside an existing tab's stack. Use whenever adding a route under src/app/.
+description: Scaffold a Platin screen, either a new tab in the floating tab bar or a screen pushed inside an existing tab's stack. Use whenever adding a route under src/app/.
 argument-hint: "<tab|push> <name> [parent tab]"
 ---
 

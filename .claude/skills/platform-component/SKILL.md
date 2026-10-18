@@ -1,6 +1,6 @@
 ---
 name: platform-component
-description: Build a Questlog UI component that looks native on each platform, as a Component.tsx (iOS) + Component.android.tsx pair behind one Props interface. Use for any component whose visuals differ between iOS (HIG, Liquid Glass) and Android (Material 3 Expressive).
+description: Build a Platin UI component that looks native on each platform, as a Component.tsx (iOS) + Component.android.tsx pair behind one Props interface. Use for any component whose visuals differ between iOS (HIG, Liquid Glass) and Android (Material 3 Expressive).
 argument-hint: "<ComponentName> [what it does]"
 ---
 

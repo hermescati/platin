@@ -1,4 +1,4 @@
-# Questlog
+# Platin
 
 One log of every game you play, on every platform, filled in for you and rated your way.
 

@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Verify, commit and push the current Questlog changes to GitHub, with the user as sole author.
+description: Verify, commit and push the current Platin changes to GitHub, with the user as sole author.
 disable-model-invocation: true
 argument-hint: "[commit subject]"
 ---
@@ -32,4 +32,4 @@ Report the failure output and offer to fix it. Never commit around a failure.
 
 ## 4. Push
 
-Run `git push` to the tracking branch on `origin` (github.com/hermescati/questlog). Never force-push unless the user asks for it in this conversation. Finish with the commit hash and subject.
+Run `git push` to the tracking branch on `origin` (github.com/hermescati/platin). Never force-push unless the user asks for it in this conversation. Finish with the commit hash and subject.

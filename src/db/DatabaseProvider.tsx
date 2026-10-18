@@ -8,7 +8,7 @@ interface Props {
 }
 
 export const DatabaseProvider = ({ children }: Props) => (
-  <SQLiteProvider databaseName="questlog.db" options={{ enableChangeListener: true }} onInit={migrate}>
+  <SQLiteProvider databaseName="platin.db" options={{ enableChangeListener: true }} onInit={migrate}>
     {children}
   </SQLiteProvider>
 );

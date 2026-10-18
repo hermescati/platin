@@ -28,8 +28,8 @@ interface NativeGlassBackdropProps extends ViewProps {
   group?: string;
 }
 
-export const NativeGlassView = requireNativeView<NativeGlassViewProps>('QuestlogGlass', 'QuestlogGlassView');
+export const NativeGlassView = requireNativeView<NativeGlassViewProps>('PlatinGlass', 'PlatinGlassView');
 
 export const AnimatedNativeGlassView = Animated.createAnimatedComponent(NativeGlassView);
 
-export const NativeGlassBackdrop = requireNativeView<NativeGlassBackdropProps>('QuestlogGlass', 'QuestlogGlassBackdropView');
+export const NativeGlassBackdrop = requireNativeView<NativeGlassBackdropProps>('PlatinGlass', 'PlatinGlassBackdropView');

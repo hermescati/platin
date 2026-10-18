@@ -48,3 +48,6 @@ example
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# native module build output
+modules/*/android/build/
