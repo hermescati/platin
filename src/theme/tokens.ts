@@ -49,7 +49,14 @@ export const radius = { sm: 6, md: 10, lg: 14, xl: 20, pill: 999 } as const;
 
 export const fontSize = { xs: 11, sm: 13, md: 15, lg: 17, xl: 22, xxl: 28 } as const;
 
-export const layout = { tabBarHeight: 64, tabIconSize: 24, hairline: 1 } as const;
+export const layout = {
+  tabBarHeight: 64,
+  tabIconSize: 24,
+  hairline: 1,
+  coverAspectRatio: 3 / 4,
+  libraryColumns: 3,
+  coverIconSize: 32,
+} as const;
 
 export const glass = { blurIntensity: 60 } as const;
 
@@ -59,4 +66,11 @@ export const motion = {
   lensMaxStretch: 0.3,
   stretchVelocity: 2400,
   pressScale: 0.92,
+} as const;
+
+export const cover = {
+  placeholders: ['#3B3F8F', '#7A3E6B', '#2F6F68', '#8A5A2B', '#4E6A2F', '#6B3A4A', '#2D5B8A', '#5C4B8A'],
+  text: '#FFFFFF',
+  icon: 'rgba(255, 255, 255, 0.35)',
+  badge: 'rgba(0, 0, 0, 0.55)',
 } as const;

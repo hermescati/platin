@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 
+import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { useTheme } from '@/theme/useTheme';
 
 const RootLayout = () => {
@@ -7,7 +8,9 @@ const RootLayout = () => {
 
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <DatabaseProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </DatabaseProvider>
     </ThemeProvider>
   );
 };

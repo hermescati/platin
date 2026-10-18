@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
+import { TabStack } from '@/components/navigation/TabStack';
 
-const TabStackLayout = () => <Stack screenOptions={{ headerLargeTitle: true, headerTransparent: true }} />;
+const TabStackLayout = () => <TabStack />;
 
 export default TabStackLayout;
