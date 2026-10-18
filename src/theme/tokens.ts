@@ -85,6 +85,7 @@ export const layout = {
   coverAspectRatio: 3 / 4,
   libraryColumns: 3,
   coverIconSize: 32,
+  searchCoverWidth: 48,
 } as const;
 
 export const glass = {
