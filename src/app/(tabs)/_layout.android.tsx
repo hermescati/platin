@@ -1,27 +1,33 @@
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { GlassBackdrop } from '@/components/glass/GlassBackdrop';
-import { GlassProvider } from '@/components/glass/GlassProvider';
+import { SearchQueryProvider } from '@/components/search/SearchQuery';
 import { FloatingTabBar } from '@/components/tab-bar/FloatingTabBar';
+import { TabBarCollapseProvider } from '@/components/tab-bar/TabBarCollapse';
 import { allTabs } from '@/components/tab-bar/tabs';
 
 const TabsLayout = () => (
   <GestureHandlerRootView style={styles.fill}>
-    <GlassProvider>
-      <Tabs style={styles.fill}>
-        <GlassBackdrop>
-          <TabSlot />
-        </GlassBackdrop>
-        <FloatingTabBar />
-        <TabList style={styles.hidden}>
-          {allTabs.map((tab) => (
-            <TabTrigger key={tab.name} name={tab.name} href={tab.href} />
-          ))}
-        </TabList>
-      </Tabs>
-    </GlassProvider>
+    <KeyboardProvider>
+      <SearchQueryProvider>
+        <TabBarCollapseProvider>
+          <Tabs style={styles.fill}>
+            <GlassBackdrop>
+              <TabSlot />
+            </GlassBackdrop>
+            <FloatingTabBar />
+            <TabList style={styles.hidden}>
+              {allTabs.map((tab) => (
+                <TabTrigger key={tab.name} name={tab.name} href={tab.href} />
+              ))}
+            </TabList>
+          </Tabs>
+        </TabBarCollapseProvider>
+      </SearchQueryProvider>
+    </KeyboardProvider>
   </GestureHandlerRootView>
 );
 

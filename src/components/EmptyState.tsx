@@ -1,6 +1,8 @@
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
+import { useTabBarScroll } from '@/components/tab-bar/useTabBarScroll';
 import { fontSize, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -12,15 +14,18 @@ interface Props {
 export const EmptyState = ({ title, description }: Props) => {
   const { color } = useTheme();
   const tabBarInset = useTabBarInset();
+  const onScroll = useTabBarScroll();
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       contentInsetAdjustmentBehavior="automatic"
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       style={{ backgroundColor: color.background }}
       contentContainerStyle={[styles.content, { paddingBottom: tabBarInset }]}>
       <Text style={[styles.title, { color: color.textPrimary }]}>{title}</Text>
       <Text style={[styles.description, { color: color.textSecondary }]}>{description}</Text>
-    </ScrollView>
+    </Animated.ScrollView>
   );
 };
 
