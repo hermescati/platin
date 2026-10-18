@@ -1,7 +1,3 @@
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+export const useTabBarOffset = (): number => 0;
 
-import { layout, spacing } from '@/theme/tokens';
-
-export const useTabBarOffset = (): number => Math.max(useSafeAreaInsets().bottom, spacing.md);
-
-export const useTabBarInset = (): number => useTabBarOffset() + layout.tabBarHeight + spacing.md;
+export const useTabBarInset = (): number => 0;

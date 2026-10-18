@@ -10,6 +10,8 @@ export interface Palette {
   accentSoft: string;
   glassTint: string;
   glassBorder: string;
+  lens: string;
+  lensActive: string;
 }
 
 export const palettes: Record<ColorSchemeName, Palette> = {
@@ -23,6 +25,8 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     accentSoft: 'rgba(91, 91, 214, 0.14)',
     glassTint: 'rgba(255, 255, 255, 0.55)',
     glassBorder: 'rgba(0, 0, 0, 0.08)',
+    lens: 'rgba(0, 0, 0, 0.06)',
+    lensActive: 'rgba(255, 255, 255, 0.85)',
   },
   dark: {
     background: '#000000',
@@ -34,6 +38,8 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     accentSoft: 'rgba(155, 158, 240, 0.18)',
     glassTint: 'rgba(28, 28, 32, 0.55)',
     glassBorder: 'rgba(255, 255, 255, 0.12)',
+    lens: 'rgba(255, 255, 255, 0.10)',
+    lensActive: 'rgba(255, 255, 255, 0.22)',
   },
 };
 
@@ -46,3 +52,11 @@ export const fontSize = { xs: 11, sm: 13, md: 15, lg: 17, xl: 22, xxl: 28 } as c
 export const layout = { tabBarHeight: 64, tabIconSize: 24, hairline: 1 } as const;
 
 export const glass = { blurIntensity: 60 } as const;
+
+export const motion = {
+  spring: { damping: 18, stiffness: 240, mass: 0.7 },
+  lensLift: 1.12,
+  lensMaxStretch: 0.3,
+  stretchVelocity: 2400,
+  pressScale: 0.92,
+} as const;
