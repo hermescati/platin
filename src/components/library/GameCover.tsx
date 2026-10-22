@@ -1,14 +1,16 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Icon } from '@/components/icon/Icon';
+import { Text } from '@/components/ui/Text';
 import { igdbCoverUrl } from '@/lib/igdb';
-import { cover, fontSize, layout, radius, spacing } from '@/theme/tokens';
+import { cover, layout, motion, radius, space } from '@/theme/tokens';
 
 interface Props {
   title: string;
   coverImageId: string | null;
   badge?: string;
+  compact?: boolean;
 }
 
 const placeholderColor = (title: string): string => {
@@ -19,22 +21,18 @@ const placeholderColor = (title: string): string => {
   return cover.placeholders[Math.abs(hash) % cover.placeholders.length];
 };
 
-export const GameCover = ({ title, coverImageId, badge }: Props) => (
-  <View style={[styles.cover, { backgroundColor: placeholderColor(title) }]}>
+export const GameCover = ({ title, coverImageId, badge, compact = false }: Props) => (
+  <View style={[styles.cover, { backgroundColor: placeholderColor(title), borderRadius: compact ? radius.sm : radius.md }]}>
     {coverImageId ? (
-      <Image source={igdbCoverUrl(coverImageId)} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+      <Image source={igdbCoverUrl(coverImageId)} style={StyleSheet.absoluteFill} contentFit="cover" transition={motion.fade} />
     ) : (
       <View style={styles.placeholder}>
-        <SymbolView
-          name={{ ios: 'gamecontroller.fill', android: 'sports_esports' }}
-          size={layout.coverIconSize}
-          tintColor={cover.icon}
-        />
+        <Icon name="gamepad" variant="fill" size={layout.coverIconSize} color={cover.icon} />
       </View>
     )}
     {badge && (
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>{badge}</Text>
+        <Text variant="captionEmphasized" style={styles.badgeText}>{badge}</Text>
       </View>
     )}
   </View>
@@ -44,7 +42,6 @@ const styles = StyleSheet.create({
   cover: {
     width: '100%',
     aspectRatio: layout.coverAspectRatio,
-    borderRadius: radius.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
   },
@@ -55,16 +52,14 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: spacing.xs,
-    left: spacing.xs,
-    paddingHorizontal: spacing.xs + spacing.xxs,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.pill,
+    top: space[4],
+    left: space[4],
+    paddingHorizontal: space[6],
+    paddingVertical: space[2],
+    borderRadius: radius.full,
     backgroundColor: cover.badge,
   },
   badgeText: {
     color: cover.text,
-    fontSize: fontSize.xs,
-    fontWeight: '600',
   },
 });

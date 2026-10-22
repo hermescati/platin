@@ -1,15 +1,17 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, type ComponentRef } from 'react';
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
+import { Icon } from '@/components/icon/Icon';
 import { useSearchQuery } from '@/components/search/SearchQuery';
 import type { useGlassPress } from '@/components/tab-bar/useGlassPress';
 import { searchPlaceholder, type TabConfig } from '@/components/tab-bar/tabs';
-import { fontSize, layout, motion, spacing } from '@/theme/tokens';
+import { layout, motion, space, typography } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 const fullHeight = layout.tabBarHeight;
+const modeHeight = layout.searchModeHeight;
+const modeInset = (fullHeight - modeHeight) / 2;
 
 const clamp01 = (value: number) => {
   'worklet';
@@ -42,7 +44,8 @@ export const SearchMode = ({ active, mode, backTab, backPress, onBack }: Props) 
     opacity: clamp01(mode.get() * 2 - 0.6),
     transform: [{ scale: 1 + backPress.press.get() * motion.pressGrow }],
   }));
-  const backGlowStyle = useAnimatedStyle(() => ({ opacity: backPress.press.get() }));
+  const backFillStyle = useAnimatedStyle(() => ({ opacity: backPress.press.get() }));
+  const backInkStyle = useAnimatedStyle(() => ({ opacity: 1 - backPress.press.get() * motion.pressIconDim }));
   const contentStyle = useAnimatedStyle(() => ({ opacity: clamp01(mode.get() * 2 - 1) }));
 
   const goBack = () => {
@@ -60,23 +63,23 @@ export const SearchMode = ({ active, mode, backTab, backPress, onBack }: Props) 
         accessibilityRole="button"
         accessibilityLabel={backTab.label}>
         <Animated.View style={[StyleSheet.absoluteFill, backStyle]}>
-          <Animated.View style={[styles.glow, { boxShadow: color.lensGlow }, backGlowStyle]} />
-          <View style={styles.center}>
-            <MaterialIcons name={backTab.icon} size={layout.tabIconSize} color={color.textPrimary} />
-          </View>
+          <Animated.View style={[styles.fill, { backgroundColor: color.chrome.pressFill }, backFillStyle]} />
+          <Animated.View style={[styles.center, backInkStyle]}>
+            <Icon name={backTab.icon} variant="fill" size={layout.tabIconSize} />
+          </Animated.View>
         </Animated.View>
       </Pressable>
       <Animated.View style={[styles.field, contentStyle]}>
-        <MaterialIcons name="search" size={layout.searchFieldIconSize} color={color.textSecondary} />
+        <Icon name="search" size={layout.searchFieldIconSize} tone="secondary" />
         <TextInput
           ref={input}
-          style={[styles.input, { color: color.textPrimary }]}
+          style={[styles.input, { color: color.text.primary }]}
           value={query}
           onChangeText={setQuery}
           placeholder={searchPlaceholder}
-          placeholderTextColor={color.textSecondary}
-          selectionColor={color.accent}
-          cursorColor={color.accent}
+          placeholderTextColor={color.text.secondary}
+          selectionColor={color.accent.default}
+          cursorColor={color.accent.default}
           returnKeyType="search"
           autoCorrect={false}
           numberOfLines={1}
@@ -89,25 +92,25 @@ export const SearchMode = ({ active, mode, backTab, backPress, onBack }: Props) 
 const styles = StyleSheet.create({
   back: {
     position: 'absolute',
-    left: 0,
-    top: 0,
-    width: fullHeight,
-    height: fullHeight,
+    left: modeInset,
+    top: modeInset,
+    width: modeHeight,
+    height: modeHeight,
   },
   field: {
     position: 'absolute',
-    left: fullHeight + layout.tabBarGap,
-    right: fullHeight + layout.tabBarGap,
-    top: 0,
-    height: fullHeight,
+    left: modeInset + modeHeight + layout.searchModeGap,
+    right: modeInset + modeHeight + layout.searchModeGap,
+    top: modeInset,
+    height: modeHeight,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
+    gap: space[4],
+    paddingHorizontal: layout.searchFieldInset,
   },
-  glow: {
+  fill: {
     ...StyleSheet.absoluteFill,
-    borderRadius: fullHeight / 2,
+    borderRadius: modeHeight / 2,
   },
   center: {
     ...StyleSheet.absoluteFill,
@@ -116,7 +119,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: fontSize.lg,
+    fontSize: typography.body.fontSize,
     paddingVertical: 0,
   },
 });

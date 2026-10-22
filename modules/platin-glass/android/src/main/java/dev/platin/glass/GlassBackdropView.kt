@@ -12,6 +12,13 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
   internal val node: RenderNode? =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("PlatinGlassBackdrop") else null
 
+  init {
+    clipChildren = false
+    clipToPadding = false
+  }
+
+  var offscreen = false
+
   var group: String = GlassRegistry.DEFAULT_GROUP
     set(value) {
       if (value == field) return
@@ -42,12 +49,13 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
       return
     }
     recorder.setPosition(0, 0, width, height)
+    recorder.setClipToBounds(false)
     val recording = recorder.beginRecording(width, height)
     try {
       super.dispatchDraw(recording)
     } finally {
       recorder.endRecording()
     }
-    canvas.drawRenderNode(recorder)
+    if (!offscreen) canvas.drawRenderNode(recorder)
   }
 }

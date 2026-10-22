@@ -1,90 +1,397 @@
+import type { TextStyle } from 'react-native';
+
+import { fonts } from '@/theme/fonts';
+
 export type ColorSchemeName = 'light' | 'dark';
 
+const withAlpha = (hex: string, alpha: number): string => {
+  const value = parseInt(hex.slice(1), 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+};
+
+export const palette = {
+  neutral: {
+    0: '#FFFFFF',
+    50: '#F4F5F9',
+    100: '#E7E7EC',
+    200: '#D4D4D8',
+    300: '#BABABE',
+    400: '#9B9B9F',
+    500: '#7B7B7F',
+    600: '#5E5F62',
+    700: '#444548',
+    800: '#2F2F32',
+    900: '#1E1E21',
+    950: '#111114',
+    1000: '#000000',
+  },
+  accent: {
+    50: '#FFF4EF',
+    100: '#FEEADF',
+    200: '#FED6C1',
+    300: '#FFBF9C',
+    400: '#FEA572',
+    500: '#FF8433',
+    600: '#DC6A16',
+    700: '#B65402',
+    800: '#8E4000',
+    900: '#692E01',
+    950: '#461C00',
+  },
+  green: {
+    50: '#ECFCED',
+    100: '#D1F7D3',
+    200: '#A2EEAA',
+    300: '#6CE27E',
+    400: '#30D158',
+    500: '#04BA44',
+    600: '#019D38',
+    700: '#02822D',
+    800: '#006621',
+    900: '#014C17',
+    950: '#01340E',
+  },
+  blue: {
+    50: '#F2F7FE',
+    100: '#D8E9FF',
+    200: '#B3D3FE',
+    300: '#8ABCFE',
+    400: '#5AA2FE',
+    500: '#0A84FF',
+    600: '#0371DC',
+    700: '#035EBA',
+    800: '#004A96',
+    900: '#003976',
+    950: '#002957',
+  },
+  yellow: {
+    50: '#FCF7E3',
+    100: '#FFF2C2',
+    200: '#FFE689',
+    300: '#FFD60A',
+    400: '#E4BF01',
+    500: '#C7A605',
+    600: '#A78B09',
+    700: '#887101',
+    800: '#695701',
+    900: '#4D4002',
+    950: '#332900',
+  },
+  red: {
+    50: '#FEF4F4',
+    100: '#FEE1E1',
+    200: '#FFC4C5',
+    300: '#FEA3A6',
+    400: '#FE7A84',
+    500: '#FF3B5C',
+    600: '#DF234A',
+    700: '#BC163B',
+    800: '#960F2D',
+    900: '#740821',
+    950: '#540315',
+  },
+  ice: {
+    50: '#F0F8FE',
+    100: '#DEF0FF',
+    200: '#BFE3FF',
+    300: '#A3D0F2',
+    400: '#8EBADC',
+    500: '#78A4C5',
+    600: '#608BAB',
+    700: '#487291',
+    800: '#305977',
+    900: '#20425B',
+    950: '#122D3F',
+  },
+  gold: {
+    50: '#FDF6EA',
+    100: '#FDEBD0',
+    200: '#FBD9A3',
+    300: '#F6C472',
+    400: '#EAB046',
+    500: '#D89B1E',
+    600: '#B88100',
+    700: '#966901',
+    800: '#745104',
+    900: '#563B01',
+    950: '#3A2600',
+  },
+  bronze: {
+    50: '#FEF5F0',
+    100: '#F9DFD2',
+    200: '#F2C2A8',
+    300: '#E6A37E',
+    400: '#D38559',
+    500: '#B8693A',
+    600: '#A1582C',
+    700: '#894922',
+    800: '#6E3B1B',
+    900: '#572D14',
+    950: '#40210E',
+  },
+} as const;
+
+const { neutral: n, accent: a, green: g, blue: b, yellow: y, red: r, ice } = palette;
+const white = n[0];
+const black = n[1000];
+
 export interface Palette {
-  background: string;
-  surface: string;
-  border: string;
-  textPrimary: string;
-  textSecondary: string;
-  accent: string;
-  danger: string;
-  glassTint: string;
-  glassSheen: string;
-  glassRimTop: string;
-  glassRimBottom: string;
-  glassGlow: string;
-  glassShadow: string;
-  lens: string;
-  lensActive: string;
-  lensInnerShadow: string;
-  lensGlow: string;
-  tabLegibilityShadow: string;
+  bg: {
+    screen: string;
+    surface: string;
+    raised: string;
+    raisedPressed: string;
+    sheet: string;
+    sheetGroup: string;
+    toast: string;
+  };
+  text: { primary: string; secondary: string; tertiary: string; onAccent: string };
+  line: { hairline: string; track: string; strong: string };
+  overlay: { scrim: string };
+  accent: { default: string; fill: string; pressed: string; tint: string };
+  status: {
+    success: string;
+    successTint: string;
+    info: string;
+    infoTint: string;
+    warning: string;
+    warningTint: string;
+    danger: string;
+    dangerTint: string;
+  };
+  tier: { story: string; complete: string; platinum: string; platinumTint: string };
+  glass: {
+    fill: string;
+    fillPressed: string;
+    rim: string;
+    highlight: string;
+    tintFill: string;
+    tintFillPressed: string;
+    tintRim: string;
+  };
+  menu: { fill: string };
+  cover: { badge: string; edge: string };
+  shadow: { lifted: string; glass: string; floating: string; floatingNear: string; floatingHighlight: string };
+  heat: { low: string; mid: string; high: string };
+  chrome: {
+    tint: string;
+    fallback: string;
+    shadow: string;
+    lens: string;
+    lensActive: string;
+    lensInnerShadow: string;
+    lensGlow: string;
+    lensRim: string;
+    pressFill: string;
+    pressLift: string;
+    lensTint: string;
+    tabAccent: string;
+    legibilityShadow: string;
+  };
 }
 
 export const palettes: Record<ColorSchemeName, Palette> = {
-  light: {
-    background: '#FFFFFF',
-    surface: '#F2F2F5',
-    border: '#E0E1E6',
-    textPrimary: '#0B0B0F',
-    textSecondary: '#60646C',
-    accent: '#5B5BD6',
-    danger: '#DC3E42',
-    glassTint: 'rgba(255, 255, 255, 0.6)',
-    glassSheen: 'rgba(255, 255, 255, 0.70)',
-    glassRimTop: 'rgba(255, 255, 255, 0.85)',
-    glassRimBottom: 'rgba(0, 0, 0, 0.06)',
-    glassGlow: 'rgba(255, 255, 255, 0.5)',
-    glassShadow: 'rgba(0, 0, 0, 0.14)',
-    lens: 'rgba(0, 0, 0, 0.07)',
-    lensActive: 'rgba(255, 255, 255, 0.28)',
-    lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.7)',
-    tabLegibilityShadow: 'rgba(255, 255, 255, 0.6)',
-    lensGlow:
-      'inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 12px rgba(255, 255, 255, 0.35)',
-  },
   dark: {
-    background: '#000000',
-    surface: '#1A1A1F',
-    border: '#2E3135',
-    textPrimary: '#F5F5F7',
-    textSecondary: '#B0B4BA',
-    accent: '#9B9EF0',
-    danger: '#FF6369',
-    glassTint: 'rgba(16, 16, 20, 0.62)',
-    glassSheen: 'rgba(255, 255, 255, 0.04)',
-    glassRimTop: 'rgba(255, 255, 255, 0.22)',
-    glassRimBottom: 'rgba(255, 255, 255, 0.03)',
-    glassGlow: 'rgba(255, 255, 255, 0.06)',
-    glassShadow: 'rgba(0, 0, 0, 0.45)',
-    lens: 'rgba(255, 255, 255, 0.14)',
-    lensActive: 'rgba(255, 255, 255, 0.07)',
-    lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.22)',
-    tabLegibilityShadow: 'rgba(0, 0, 0, 0.55)',
-    lensGlow:
-      'inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.6), inset -1.5px -1.5px 0 rgba(255, 255, 255, 0.22), inset 0 0 12px rgba(255, 255, 255, 0.08)',
+    bg: {
+      screen: n[1000],
+      surface: n[900],
+      raised: n[800],
+      raisedPressed: n[700],
+      sheet: n[900],
+      sheetGroup: n[800],
+      toast: n[950],
+    },
+    text: { primary: n[0], secondary: n[400], tertiary: n[500], onAccent: n[950] },
+    line: { hairline: withAlpha(white, 0.1), track: withAlpha(white, 0.08), strong: withAlpha(white, 0.22) },
+    overlay: { scrim: withAlpha(black, 0.55) },
+    accent: { default: a[500], fill: a[500], pressed: a[600], tint: withAlpha(a[500], 0.14) },
+    status: {
+      success: g[400],
+      successTint: withAlpha(g[400], 0.14),
+      info: b[400],
+      infoTint: withAlpha(b[400], 0.14),
+      warning: y[300],
+      warningTint: withAlpha(y[300], 0.14),
+      danger: r[500],
+      dangerTint: withAlpha(r[500], 0.16),
+    },
+    tier: { story: g[400], complete: a[500], platinum: ice[200], platinumTint: withAlpha(ice[200], 0.16) },
+    glass: {
+      fill: withAlpha('#2C2C30', 0.2),
+      fillPressed: withAlpha('#0E0E10', 0.75),
+      rim: withAlpha(white, 0.14),
+      highlight: withAlpha(white, 0.18),
+      tintFill: withAlpha(a[500], 0.22),
+      tintFillPressed: withAlpha(a[500], 0.14),
+      tintRim: withAlpha('#FF9650', 0.55),
+    },
+    menu: { fill: withAlpha('#242428', 0.4) },
+    cover: { badge: withAlpha(black, 0.55), edge: withAlpha(black, 0) },
+    shadow: {
+      lifted: withAlpha(black, 0.6),
+      glass: withAlpha(black, 0.35),
+      floating: withAlpha(black, 0.6),
+      floatingNear: withAlpha(black, 0),
+      floatingHighlight: withAlpha(white, 0.08),
+    },
+    heat: { low: withAlpha(a[500], 0.28), mid: withAlpha(a[500], 0.55), high: a[500] },
+    chrome: {
+      tint: 'rgba(0, 0, 0, 0.45)',
+      fallback: n[800],
+      shadow: 'rgba(0, 0, 0, 0.45)',
+      lens: 'rgba(0, 0, 0, 0.68)',
+      lensActive: 'rgba(255, 255, 255, 0.07)',
+      lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.06)',
+      lensRim: 'rgba(255, 255, 255, 0.16)',
+      pressFill: 'rgba(255, 255, 255, 0.38)',
+      pressLift: 'rgba(255, 255, 255, 0.038)',
+      lensTint: 'rgba(255, 255, 255, 0.035)',
+      tabAccent: '#F8A154',
+      lensGlow:
+        'inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.6), inset -1.5px -1.5px 0 rgba(255, 255, 255, 0.22), inset 0 0 12px rgba(255, 255, 255, 0.08)',
+      legibilityShadow: 'rgba(0, 0, 0, 0.55)',
+    },
+  },
+  light: {
+    bg: {
+      screen: n[0],
+      surface: n[50],
+      raised: n[100],
+      raisedPressed: n[200],
+      sheet: n[0],
+      sheetGroup: n[50],
+      toast: n[0],
+    },
+    text: { primary: n[1000], secondary: n[600], tertiary: n[500], onAccent: n[950] },
+    line: { hairline: withAlpha(black, 0.1), track: withAlpha(black, 0.06), strong: withAlpha(black, 0.16) },
+    overlay: { scrim: withAlpha(black, 0.2) },
+    accent: { default: a[700], fill: a[500], pressed: a[600], tint: withAlpha(a[500], 0.16) },
+    status: {
+      success: g[700],
+      successTint: withAlpha(g[500], 0.14),
+      info: b[700],
+      infoTint: withAlpha(b[500], 0.12),
+      warning: y[800],
+      warningTint: withAlpha(y[400], 0.2),
+      danger: r[700],
+      dangerTint: withAlpha(r[500], 0.12),
+    },
+    tier: { story: g[700], complete: a[700], platinum: ice[700], platinumTint: withAlpha(ice[500], 0.16) },
+    glass: {
+      fill: withAlpha('#F6F6F8', 0.3),
+      fillPressed: withAlpha('#DEDEE4', 0.85),
+      rim: withAlpha(black, 0.06),
+      highlight: withAlpha(white, 1),
+      tintFill: withAlpha(a[500], 0.16),
+      tintFillPressed: withAlpha(a[500], 0.26),
+      tintRim: withAlpha('#D66818', 0.45),
+    },
+    menu: { fill: withAlpha('#FAFAFC', 0.5) },
+    cover: { badge: withAlpha(black, 0.55), edge: withAlpha(black, 0.12) },
+    shadow: {
+      lifted: withAlpha(black, 0.22),
+      glass: withAlpha(black, 0.06),
+      floating: withAlpha(black, 0.16),
+      floatingNear: withAlpha(black, 0.08),
+      floatingHighlight: withAlpha(white, 0),
+    },
+    heat: { low: withAlpha(a[500], 0.22), mid: withAlpha(a[500], 0.5), high: a[500] },
+    chrome: {
+      tint: 'rgba(255, 255, 255, 0.6)',
+      fallback: n[50],
+      shadow: 'rgba(0, 0, 0, 0.14)',
+      lens: 'rgba(0, 0, 0, 0.07)',
+      lensActive: 'rgba(255, 255, 255, 0.28)',
+      lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.7)',
+      lensRim: 'rgba(0, 0, 0, 0.25)',
+      pressFill: 'rgba(0, 0, 0, 0.18)',
+      pressLift: 'rgba(0, 0, 0, 0.05)',
+      lensTint: 'rgba(255, 255, 255, 0.15)',
+      tabAccent: a[700],
+      lensGlow:
+        'inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 12px rgba(255, 255, 255, 0.35)',
+      legibilityShadow: 'rgba(255, 255, 255, 0.6)',
+    },
   },
 };
 
-export const spacing = { xxs: 2, xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+export const typography = {
+  display: { fontSize: 40, lineHeight: 44, fontFamily: fonts.brand },
+  largeTitle: { fontSize: 34, lineHeight: 40, fontFamily: fonts.brand },
+  gameTitle: { fontSize: 30, lineHeight: 36, fontFamily: fonts.brand },
+  title2: { fontSize: 22, lineHeight: 28, fontWeight: '700' },
+  title3: { fontSize: 20, lineHeight: 24, fontWeight: '600' },
+  headline: { fontSize: 17, lineHeight: 22, fontWeight: '600' },
+  body: { fontSize: 17, lineHeight: 22, fontWeight: '400' },
+  subhead: { fontSize: 15, lineHeight: 20, fontWeight: '400' },
+  subheadEmphasized: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+  footnoteEmphasized: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' },
+  captionEmphasized: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  eyebrow: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase' },
+  statHero: { fontSize: 34, lineHeight: 40, fontWeight: '700', fontFamily: fonts.numbers, fontVariant: ['tabular-nums'] },
+  stat: { fontSize: 22, lineHeight: 28, fontWeight: '700', fontFamily: fonts.numbers, fontVariant: ['tabular-nums'] },
+  statSmall: { fontSize: 15, lineHeight: 20, fontWeight: '600', fontFamily: fonts.numbers, fontVariant: ['tabular-nums'] },
+} as const satisfies Record<string, TextStyle>;
 
-export const radius = { sm: 6, md: 10, lg: 14, xl: 20, sheet: 28, pill: 999 } as const;
+export const space = {
+  2: 2,
+  4: 4,
+  6: 6,
+  8: 8,
+  16: 16,
+  24: 24,
+  32: 32,
+  40: 40,
+  48: 48,
+  64: 64,
+  gutter: 16,
+  section: 32,
+  headerToContent: 24,
+  titleToContent: 16,
+  stack: 8,
+  inset: 16,
+  sheetInset: 8,
+  popover: 6,
+  aboveDock: 12,
+} as const;
+
+export const radius = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, sheet: 40, full: 999 } as const;
+
+export const icon = {
+  grid: 24,
+  size: 24,
+  stroke: { regular: 1.75, bold: 2.3 },
+  smallSize: 16,
+  smallStrokeScale: 1.15,
+  knockoutScale: 1.1,
+} as const;
 
 export const opacity = { pressed: 0.7, disabled: 0.5 } as const;
 
-export const fontSize = { xs: 11, sm: 13, md: 15, lg: 17, xl: 22, xxl: 28 } as const;
-
 export const layout = {
-  tabBarHeight: 58,
+  tabBarHeight: 62,
   tabBarCompactHeight: 44,
   tabBarCompactWidthRatio: 0.72,
   tabLabelHeight: 14,
-  tabBarSideInset: 30,
-  tabBarGap: 10,
+  tabLabelSize: 10,
+  tabBarSideInset: 21,
+  tabBarBottomOffsetAndroid: 32,
+  tabBarMaxWidth: 360,
+  tabBarInlinePadding: 7,
+  bubbleRestWidth: 76,
+  bubbleRestHeight: 54,
+  tabBarGap: 8,
+  searchModeHeight: 48,
+  searchModeGap: 12,
+  gestureNavInsetMax: 32,
   legibilityShadowRadius: 4,
-  tabIconSize: 24,
-  searchIconSize: 30,
-  searchFieldIconSize: 22,
+  tabIconSize: 28,
+  searchIconSize: 28,
+  closeIconSize: 44,
+  searchFieldIconSize: 24,
+  searchFieldInset: 10,
   hairline: 1,
   glassRim: 1,
   coverAspectRatio: 3 / 4,
@@ -99,40 +406,123 @@ export const glass = {
   blurIntensity: 30,
   pad: 28,
   blend: 8,
-  glowRadius: 8,
-  rimWidth: 1.5,
   shadowRadius: 12,
   shadowOffset: 6,
-  blurRadius: 8,
+  blurRadius: 6,
   bezel: 20,
-  refraction: 14,
-  lensBlurRadius: 1.5,
-  lensBezel: 14,
-  lensRefraction: 8,
-  lensMagnify: 0.15,
+  refraction: 0,
+  falloff: 2,
+  dispersion: 0,
+  saturation: 1.4,
+  adaptive: { dark: 0.9, light: 0.5 },
+  lightAngle: 30,
+  specular: 0,
+  highlightWidth: 2,
+  edgeSharp: 0.24,
+  edgeSoft: 0.02,
+  sharpWidth: 0.6,
+  softWidth: 1.5,
+  lensBlurRadius: 0,
+  lensBezel: 10,
+  lensRefraction: 7,
+  lensRefractionYScale: 1,
+  lensPinch: 18,
+  lensPinchWidth: 11,
+  lensPinchSpread: 0.26,
+  lensRimPrism: 0.5,
+  lensPinchSideReach: 0.25,
+  lensPad: 12,
+  lensFalloff: 0,
+  lensDispersion: 0.95,
+  lensMagnify: 0.2,
+  lensSpecular: 0.22,
+  lensEdgeShade: -0.45,
+  lensShadeWidth: 1,
+  liftBlend: 0,
+  meltBlend: 12,
+  pressBlend: 6,
+  pressGlow: 0.1,
+  pressGlowSpread: 62,
 } as const;
 
 export const motion = {
   springs: {
-    lens: { duration: 500, dampingRatio: 0.9 },
-    lift: { duration: 320, dampingRatio: 0.6 },
     track: { duration: 110, dampingRatio: 1 },
+    snappy: { duration: 160, dampingRatio: 1 },
+    pop: { duration: 220, dampingRatio: 1 },
+    settle: { duration: 320, dampingRatio: 0.8 },
     morph: { duration: 420, dampingRatio: 1 },
-    edgeLead: { duration: 240, dampingRatio: 0.8 },
-    edgeTrail: { duration: 520, dampingRatio: 0.5 },
-    edgeSettle: { duration: 560, dampingRatio: 0.45 },
-    searchMorph: { duration: 560, dampingRatio: 0.7 },
+    present: { duration: 500, dampingRatio: 1 },
+    celebrate: { duration: 600, dampingRatio: 0.6 },
+    lens: { duration: 380, dampingRatio: 1 },
+    lift: { duration: 220, dampingRatio: 1 },
+    release: { duration: 360, dampingRatio: 1 },
+    edgeLead: { duration: 200, dampingRatio: 1 },
+    edgeTrail: { duration: 320, dampingRatio: 0.85 },
+    edgeSettle: { duration: 320, dampingRatio: 1 },
+    searchMorph: { duration: 280, dampingRatio: 1 },
+    press: { duration: 160, dampingRatio: 1 },
+    stretch: { duration: 340, dampingRatio: 0.55 },
+    jellyLead: { duration: 240, dampingRatio: 0.75 },
+    barPressIn: { duration: 160, dampingRatio: 1 },
+    barPressOut: { duration: 220, dampingRatio: 1 },
+    jellyTrail: { duration: 340, dampingRatio: 0.6 },
+    jellySettle: { duration: 420, dampingRatio: 0.55 },
   },
-  lensLift: 1.25,
+  fade: 200,
+  scale: { press: 0.97, liftCover: 1.06, liftCard: 1.03, enter: 0.95 },
+  stagger: 40,
+  lensLift: { x: 1.36, y: 1.38 },
+  deflateTravel: 1.2,
+  deflateRamp: 0.8,
+  deflateSpeed: 0.6,
+  jelly: { period: 0.36, damping: 0.24, stretch: 0.14, kick: 0.065, thin: 0.6, max: 0.3, smoothing: 30, lean: 0.55, endZone: 0.04 },
+  squish: {
+    period: 0.5,
+    damping: 0.36,
+    impact: 0.24,
+    speedCap: 12,
+    bulge: 1.1,
+    max: 0.3,
+    memory: 3,
+    contact: 2,
+  },
+  lensPushTravel: 14,
+  endMelt: 0.7,
+  meltReach: 12,
+  lensMoveSpeed: 9,
   edgeEpsilon: 0.25,
   minLensSquash: 0.7,
-  itemMagnify: 0.2,
-  tapHold: 140,
-  pressGrow: 0.2,
+  itemMagnify: 0,
+  canal: { overflow: 2, give: 0.3, spread: 0.8, soft: 6 },
+  tapSlide: {
+    extraHeight: 4,
+    drop: 0.5,
+    lead: 490,
+    leadPerSlot: 140,
+    leadDamping: 0.9,
+    farDamping: 0.78,
+    trail: 600,
+    trailPerSlot: 105,
+    liftHold: 0.5,
+    minSquash: 0.78,
+    jellyX: 0.35,
+    jellyY: 0.5,
+    wallSpread: 0.2,
+    impact: 1.2,
+    glassRamp: 5,
+    pinch: 0.2,
+    bend: 0.6,
+  },
+  barPressHold: 60,
+  barGrow: { x: 6, y: 2.5, towardSearch: 1 },
+  lensEdgeReach: 3,
+  tapHold: 100,
+  pressGrow: 0.26,
+  pressIconDim: 0.4,
   searchDetach: 0.35,
-  searchPulse: 0.15,
-  pressSquashX: 0.08,
-  pressSquashY: 0.16,
+  pressSquashX: 0,
+  pressSquashY: 0,
   nudgeMax: 4,
   nudgeRange: 60,
   nudgeFollow: 1,
@@ -143,8 +533,17 @@ export const motion = {
 } as const;
 
 export const cover = {
-  placeholders: ['#3B3F8F', '#7A3E6B', '#2F6F68', '#8A5A2B', '#4E6A2F', '#6B3A4A', '#2D5B8A', '#5C4B8A'],
-  text: '#FFFFFF',
-  icon: 'rgba(255, 255, 255, 0.35)',
-  badge: 'rgba(0, 0, 0, 0.55)',
+  placeholders: [
+    palette.accent[800],
+    palette.blue[800],
+    palette.green[800],
+    palette.red[800],
+    palette.ice[800],
+    palette.gold[800],
+    palette.bronze[800],
+    palette.yellow[800],
+  ],
+  text: palette.neutral[0],
+  icon: withAlpha(palette.neutral[0], 0.35),
+  badge: withAlpha(palette.neutral[1000], 0.55),
 } as const;

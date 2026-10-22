@@ -5,8 +5,8 @@ import type { Palette } from '@/theme/tokens';
 export const detailScreenOptions = (color: Palette): NativeStackNavigationOptions => ({
   headerShown: true,
   headerShadowVisible: false,
-  headerStyle: { backgroundColor: color.background },
-  headerTintColor: color.textPrimary,
-  contentStyle: { backgroundColor: color.background },
+  headerStyle: { backgroundColor: color.bg.screen },
+  headerTintColor: color.text.primary,
+  contentStyle: { backgroundColor: color.bg.screen },
   title: '',
 });

@@ -1,18 +1,19 @@
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GameCover } from '@/components/library/GameCover';
 import { activityStatuses, activityStatusLabels } from '@/components/library/labels';
 import { Chip } from '@/components/ui/Chip';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { Text } from '@/components/ui/Text';
 import { addCatalogGame } from '@/db/library';
 import { platformIdsFromIgdb, usePlatforms } from '@/db/platforms';
 import type { ActivityStatus } from '@/db/types';
 import type { CatalogGame } from '@/lib/catalog';
-import { fontSize, layout, radius, spacing } from '@/theme/tokens';
+import { layout, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
@@ -41,22 +42,22 @@ export const AddGameSheet = ({ game }: Props) => {
   };
 
   return (
-    <View style={[styles.sheet, { backgroundColor: color.surface, paddingBottom: insets.bottom + spacing.md }]}>
+    <View style={[styles.sheet, { backgroundColor: color.bg.sheet, paddingBottom: insets.bottom + space[16] }]}>
       <View style={styles.header}>
         <View style={styles.cover}>
           <GameCover title={game.name} coverImageId={game.coverId} />
         </View>
         <View style={styles.titleBlock}>
-          <Text style={[styles.title, { color: color.textPrimary }]} numberOfLines={3}>
+          <Text variant="title2" numberOfLines={3}>
             {game.name}
           </Text>
           {game.releaseYear !== null && (
-            <Text style={[styles.subtitle, { color: color.textSecondary }]}>{game.releaseYear}</Text>
+            <Text variant="subhead" tone="secondary">{game.releaseYear}</Text>
           )}
         </View>
       </View>
 
-      <Text style={[styles.section, { color: color.textSecondary }]}>Status</Text>
+      <Text variant="eyebrow" tone="secondary" style={styles.section}>Status</Text>
       <View style={styles.chips}>
         {activityStatuses.map((value) => (
           <Chip
@@ -70,7 +71,7 @@ export const AddGameSheet = ({ game }: Props) => {
 
       {choices.length > 0 && (
         <>
-          <Text style={[styles.section, { color: color.textSecondary }]}>Platforms</Text>
+          <Text variant="eyebrow" tone="secondary" style={styles.section}>Platforms</Text>
           <View style={styles.chips}>
             {choices.map((platform) => (
               <Chip
@@ -95,41 +96,31 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingHorizontal: space[24],
+    paddingTop: space[24],
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: space[16],
   },
   cover: {
     width: layout.sheetCoverWidth,
   },
   titleBlock: {
     flex: 1,
-    gap: spacing.xs,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: fontSize.md,
+    gap: space[4],
   },
   section: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+    marginTop: space[24],
+    marginBottom: space[8],
   },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: space[8],
   },
   action: {
-    marginTop: spacing.xl,
+    marginTop: space[32],
   },
 });

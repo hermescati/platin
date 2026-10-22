@@ -10,6 +10,8 @@ interface IgdbGame {
   platforms?: { abbreviation?: string; name: string }[];
   total_rating?: number;
   total_rating_count?: number;
+  game_type?: { type: string };
+  parent_game?: { id: number; name: string; cover?: { image_id: string } };
 }
 
 interface CachedToken {
@@ -57,7 +59,7 @@ const searchBody = (query: string) => {
   const escaped = query.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   return [
     `search "${escaped}";`,
-    'fields name, slug, cover.image_id, first_release_date, platforms.abbreviation, platforms.name, total_rating, total_rating_count;',
+    'fields name, slug, cover.image_id, first_release_date, platforms.abbreviation, platforms.name, total_rating, total_rating_count, game_type.type, parent_game.name, parent_game.cover.image_id;',
     'where version_parent = null;',
     `limit ${RESULT_LIMIT};`,
   ].join(' ');
@@ -71,6 +73,10 @@ const toResult = (game: IgdbGame) => ({
   releaseYear: game.first_release_date ? new Date(game.first_release_date * 1000).getUTCFullYear() : null,
   platforms: (game.platforms ?? []).map((platform) => platform.abbreviation ?? platform.name),
   rating: game.total_rating ? Math.round(game.total_rating) : null,
+  type: game.game_type?.type ?? null,
+  parent: game.parent_game
+    ? { id: game.parent_game.id, name: game.parent_game.name, coverId: game.parent_game.cover?.image_id ?? null }
+    : null,
 });
 
 export default {

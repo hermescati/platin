@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import type { ReactNode } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GameCover } from '@/components/library/GameCover';
@@ -12,9 +12,10 @@ import {
   completionTiers,
 } from '@/components/library/labels';
 import { Chip } from '@/components/ui/Chip';
+import { Text } from '@/components/ui/Text';
 import { removeGame, setActivityStatus, setCompletionTier, setPlatformOwned, useGame } from '@/db/library';
 import { usePlatforms } from '@/db/platforms';
-import { fontSize, layout, opacity, radius, spacing } from '@/theme/tokens';
+import { layout, opacity, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
@@ -31,8 +32,8 @@ const Section = ({ title, children }: SectionProps) => {
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: color.textSecondary }]}>{title}</Text>
-      <View style={[styles.card, { backgroundColor: color.surface }]}>{children}</View>
+      <Text variant="eyebrow" tone="secondary" style={styles.sectionTitle}>{title}</Text>
+      <View style={[styles.card, { backgroundColor: color.bg.surface }]}>{children}</View>
     </View>
   );
 };
@@ -45,7 +46,7 @@ export const GameDetailView = ({ id }: Props) => {
   const platforms = usePlatforms() ?? [];
 
   if (!game) {
-    return <View style={[styles.fill, { backgroundColor: color.background }]} />;
+    return <View style={[styles.fill, { backgroundColor: color.bg.screen }]} />;
   }
 
   const tiers = completionTiers.filter((tier) => tier !== 'mastered' || game.canMaster || game.completionTier === tier);
@@ -67,15 +68,15 @@ export const GameDetailView = ({ id }: Props) => {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: color.background }}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
+      style={{ backgroundColor: color.bg.screen }}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space[32] }]}>
       <View style={styles.hero}>
         <View style={styles.cover}>
           <GameCover title={game.title} coverImageId={game.coverImageId} />
         </View>
-        <Text style={[styles.title, { color: color.textPrimary }]}>{game.title}</Text>
+        <Text variant="gameTitle" style={styles.title}>{game.title}</Text>
         {game.releaseYear !== null && (
-          <Text style={[styles.subtitle, { color: color.textSecondary }]}>{game.releaseYear}</Text>
+          <Text variant="subhead" tone="secondary">{game.releaseYear}</Text>
         )}
       </View>
 
@@ -120,9 +121,9 @@ export const GameDetailView = ({ id }: Props) => {
         accessibilityRole="button"
         style={({ pressed }) => [
           styles.remove,
-          { backgroundColor: color.surface, opacity: pressed ? opacity.pressed : 1 },
+          { backgroundColor: color.bg.surface, opacity: pressed ? opacity.pressed : 1 },
         ]}>
-        <Text style={[styles.removeLabel, { color: color.danger }]}>Remove from library</Text>
+        <Text variant="headline" tone="danger">Remove from library</Text>
       </Pressable>
     </ScrollView>
   );
@@ -133,51 +134,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.lg,
+    paddingHorizontal: space[16],
+    gap: space[24],
   },
   hero: {
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingTop: spacing.md,
+    gap: space[4],
+    paddingTop: space[16],
   },
   cover: {
     width: layout.detailCoverWidth,
-    marginBottom: spacing.sm,
+    marginBottom: space[8],
   },
   title: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
     textAlign: 'center',
   },
-  subtitle: {
-    fontSize: fontSize.md,
-  },
   section: {
-    gap: spacing.sm,
+    gap: space[8],
   },
   sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: space[4],
   },
   card: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.xl,
+    gap: space[8],
+    padding: space[16],
+    borderRadius: radius.lg,
     borderCurve: 'continuous',
   },
   remove: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: radius.xl,
+    paddingVertical: space[16],
+    borderRadius: radius.lg,
     borderCurve: 'continuous',
-  },
-  removeLabel: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
   },
 });

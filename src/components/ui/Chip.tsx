@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { fontSize, opacity, radius, spacing } from '@/theme/tokens';
+import { Text } from '@/components/ui/Text';
+import { opacity, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
@@ -19,21 +20,19 @@ export const Chip = ({ label, selected, onPress }: Props) => {
       accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.chip,
-        { backgroundColor: selected ? color.accent : color.background, opacity: pressed ? opacity.pressed : 1 },
+        { backgroundColor: selected ? color.accent.fill : color.bg.raised, opacity: pressed ? opacity.pressed : 1 },
       ]}>
-      <Text style={[styles.label, { color: selected ? color.background : color.textPrimary }]}>{label}</Text>
+      <Text variant="subheadEmphasized" tone={selected ? 'onAccent' : 'primary'}>
+        {label}
+      </Text>
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  label: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
+    paddingHorizontal: space[16],
+    paddingVertical: space[8],
+    borderRadius: radius.full,
   },
 });

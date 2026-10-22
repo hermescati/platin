@@ -1,14 +1,15 @@
 import { router } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { activityStatusLabels } from '@/components/library/labels';
 import { SearchResultRow } from '@/components/search/SearchResultRow';
 import { useCatalogSearch } from '@/components/search/useCatalogSearch';
 import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
+import { Text } from '@/components/ui/Text';
 import { useLibrary } from '@/db/library';
 import type { CatalogGame } from '@/lib/catalog';
-import { fontSize, spacing } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
@@ -29,11 +30,11 @@ export const SearchResults = ({ query }: Props) => {
       contentInsetAdjustmentBehavior="automatic"
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      style={{ backgroundColor: color.background }}
-      contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + spacing.md }]}>
+      style={{ backgroundColor: color.bg.screen }}
+      contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + space[16] }]}>
       {libraryMatches.length > 0 && (
         <>
-          <Text style={[styles.section, { color: color.textSecondary }]}>In your library</Text>
+          <Text variant="eyebrow" tone="secondary" style={styles.section}>In your library</Text>
           {libraryMatches.map((game) => (
             <SearchResultRow
               key={game.id}
@@ -45,11 +46,11 @@ export const SearchResults = ({ query }: Props) => {
           ))}
         </>
       )}
-      <Text style={[styles.section, { color: color.textSecondary }]}>Catalog</Text>
-      {catalog.loading && <ActivityIndicator style={styles.status} color={color.textSecondary} />}
-      {catalog.error && <Text style={[styles.message, { color: color.textSecondary }]}>{catalog.error}</Text>}
+      <Text variant="eyebrow" tone="secondary" style={styles.section}>Catalog</Text>
+      {catalog.loading && <ActivityIndicator style={styles.status} color={color.text.secondary} />}
+      {catalog.error && <Text variant="subhead" tone="secondary" style={styles.message}>{catalog.error}</Text>}
       {!catalog.loading && !catalog.error && catalog.results.length === 0 && (
-        <Text style={[styles.message, { color: color.textSecondary }]}>No games found</Text>
+        <Text variant="subhead" tone="secondary" style={styles.message}>No games found</Text>
       )}
       {catalog.results.map((game) => {
         const entry = owned.get(game.id);
@@ -77,21 +78,17 @@ const addGame = (game: CatalogGame) => router.push({ pathname: '/add-game', para
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    paddingHorizontal: space[16],
+    paddingTop: space[8],
   },
   section: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    marginTop: space[16],
+    marginBottom: space[4],
   },
   status: {
-    paddingVertical: spacing.lg,
+    paddingVertical: space[24],
   },
   message: {
-    fontSize: fontSize.md,
-    paddingVertical: spacing.md,
+    paddingVertical: space[16],
   },
 });

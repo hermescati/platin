@@ -1,3 +1,9 @@
+export interface CatalogParent {
+  id: number;
+  name: string;
+  coverId: string | null;
+}
+
 export interface CatalogGame {
   id: number;
   name: string;
@@ -6,6 +12,8 @@ export interface CatalogGame {
   releaseYear: number | null;
   platforms: string[];
   rating: number | null;
+  type: string | null;
+  parent: CatalogParent | null;
 }
 
 export const catalogMinQuery = 2;

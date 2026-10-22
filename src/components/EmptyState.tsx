@@ -1,9 +1,10 @@
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
 import { useTabBarScroll } from '@/components/tab-bar/useTabBarScroll';
-import { fontSize, spacing } from '@/theme/tokens';
+import { Text } from '@/components/ui/Text';
+import { space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
@@ -21,10 +22,10 @@ export const EmptyState = ({ title, description }: Props) => {
       contentInsetAdjustmentBehavior="automatic"
       onScroll={onScroll}
       scrollEventThrottle={16}
-      style={{ backgroundColor: color.background }}
+      style={{ backgroundColor: color.bg.screen }}
       contentContainerStyle={[styles.content, { paddingBottom: tabBarInset }]}>
-      <Text style={[styles.title, { color: color.textPrimary }]}>{title}</Text>
-      <Text style={[styles.description, { color: color.textSecondary }]}>{description}</Text>
+      <Text variant="title3">{title}</Text>
+      <Text variant="subhead" tone="secondary" style={styles.description}>{description}</Text>
     </Animated.ScrollView>
   );
 };
@@ -34,15 +35,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    padding: spacing.xl,
-  },
-  title: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
+    gap: space[8],
+    padding: space[32],
   },
   description: {
-    fontSize: fontSize.md,
     textAlign: 'center',
   },
 });

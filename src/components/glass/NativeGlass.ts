@@ -4,6 +4,8 @@ import Animated from 'react-native-reanimated';
 
 export interface NativeGlassViewProps extends ViewProps {
   group?: string;
+  underlay?: string;
+  overlay?: string;
   shapes?: number[];
   inset?: number;
   cornerRadius?: number;
@@ -11,21 +13,53 @@ export interface NativeGlassViewProps extends ViewProps {
   blurRadius: number;
   bezel: number;
   refraction: number;
+  refractOutward?: boolean;
+  refractOutwardY?: boolean;
+  refractionYScale?: number;
+  falloff?: number;
+  dispersion?: number;
   magnify?: number;
-  glowRadius?: number;
-  rimWidth?: number;
+  saturation?: number;
+  adaptive?: number;
+  dim?: number;
+  lightAngle?: number;
+  specular?: number;
+  highlightWidth?: number;
+  edgeSharp?: number;
+  edgeSoft?: number;
+  sharpWidth?: number;
+  softWidth?: number;
+  glowX?: number;
+  glowY?: number;
+  glowSpread?: number;
+  glowStrength?: number;
   shadowRadius?: number;
   shadowOffset?: number;
+  pinch?: number;
+  pinchWidth?: number;
+  pinchSpread?: number;
+  rimPrism?: number;
+  pinchLeft?: number;
+  pinchRight?: number;
+  sampleMaxX?: number;
+  ellipse?: number;
+  clipLeft?: number;
+  clipTop?: number;
+  clipRight?: number;
+  clipBottom?: number;
+  clipScaleX?: number;
+  clipScaleY?: number;
+  clipSoft?: number;
+  clipOn?: number;
   tint?: ColorValue;
-  sheen?: ColorValue;
-  rimTop?: ColorValue;
-  rimBottom?: ColorValue;
-  glow?: ColorValue;
+  rim?: ColorValue;
+  fallback?: ColorValue;
   shadow?: ColorValue;
 }
 
 interface NativeGlassBackdropProps extends ViewProps {
   group?: string;
+  offscreen?: boolean;
 }
 
 export const NativeGlassView = requireNativeView<NativeGlassViewProps>('PlatinGlass', 'PlatinGlassView');

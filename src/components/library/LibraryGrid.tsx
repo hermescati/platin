@@ -6,14 +6,14 @@ import { TabScrollMarker } from '@/components/tab-bar/TabScrollMarker';
 import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
 import { useTabBarScroll } from '@/components/tab-bar/useTabBarScroll';
 import type { LibraryGame } from '@/db/types';
-import { layout, spacing } from '@/theme/tokens';
+import { layout, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
   games: LibraryGame[];
 }
 
-const gap = spacing.md;
+const gap = space[16];
 const columns = layout.libraryColumns;
 
 export const LibraryGrid = ({ games }: Props) => {
@@ -29,7 +29,7 @@ export const LibraryGrid = ({ games }: Props) => {
         contentInsetAdjustmentBehavior="automatic"
         onScroll={onScroll}
         scrollEventThrottle={16}
-        style={{ backgroundColor: color.background }}
+        style={{ backgroundColor: color.bg.screen }}
         contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + gap }]}>
         {games.map((game) => (
           <GameCard key={game.id} game={game} width={cardWidth} />
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     columnGap: gap,
-    rowGap: spacing.lg,
+    rowGap: space[24],
     paddingHorizontal: gap,
     paddingTop: gap,
   },

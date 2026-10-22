@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { fontSize, opacity, radius, spacing } from '@/theme/tokens';
+import { Text } from '@/components/ui/Text';
+import { opacity, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 interface Props {
@@ -20,9 +21,9 @@ export const PrimaryButton = ({ label, disabled = false, onPress }: Props) => {
       accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: color.accent, opacity: disabled ? opacity.disabled : pressed ? opacity.pressed : 1 },
+        { backgroundColor: color.accent.fill, opacity: disabled ? opacity.disabled : pressed ? opacity.pressed : 1 },
       ]}>
-      <Text style={[styles.label, { color: color.background }]}>{label}</Text>
+      <Text variant="headline" tone="onAccent">{label}</Text>
     </Pressable>
   );
 };
@@ -30,11 +31,7 @@ export const PrimaryButton = ({ label, disabled = false, onPress }: Props) => {
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
-  },
-  label: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
+    paddingVertical: space[16],
+    borderRadius: radius.full,
   },
 });
