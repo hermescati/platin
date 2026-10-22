@@ -24,5 +24,6 @@ export const useGlassStyle = () => {
     tint: color.chrome.tint,
     fallback: color.chrome.fallback,
     shadow: color.chrome.shadow,
+    rim: color.chrome.barRim,
   };
 };

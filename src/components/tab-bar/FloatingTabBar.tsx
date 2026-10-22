@@ -195,7 +195,7 @@ export const FloatingTabBar = () => {
   const window = useWindowDimensions();
   const barSpan = Math.min(window.width - layout.tabBarSideInset * 2, layout.tabBarMaxWidth);
   const barLeft = (window.width - barSpan) / 2;
-  const { color } = useTheme();
+  const { color, scheme } = useTheme();
   const collapse = useTabBarCollapse();
   const { getTrigger, switchTab } = useTabTrigger({ name: tabs[0].name });
   const focusedIndex = tabs.findIndex((tab) => getTrigger(tab.name)?.isFocused);
@@ -929,7 +929,7 @@ export const FloatingTabBar = () => {
             pinchSpread={glass.lensPinchSpread}
             rimPrism={glass.lensRimPrism}
             specular={glass.lensSpecular}
-            edgeSharp={glass.lensEdgeShade}
+            edgeSharp={glass.lensEdgeShade[scheme]}
             sharpWidth={glass.lensShadeWidth}
             lightAngle={glass.lightAngle}
             tint={color.chrome.lensTint}

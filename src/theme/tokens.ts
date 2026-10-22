@@ -182,6 +182,7 @@ export interface Palette {
     lensInnerShadow: string;
     lensGlow: string;
     lensRim: string;
+    barRim: string;
     pressFill: string;
     pressLift: string;
     lensTint: string;
@@ -243,6 +244,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lensActive: 'rgba(255, 255, 255, 0.07)',
       lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.06)',
       lensRim: 'rgba(255, 255, 255, 0.16)',
+      barRim: 'rgba(255, 255, 255, 0)',
       pressFill: 'rgba(255, 255, 255, 0.38)',
       pressLift: 'rgba(255, 255, 255, 0.038)',
       lensTint: 'rgba(255, 255, 255, 0.035)',
@@ -299,13 +301,14 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     chrome: {
       tint: 'rgba(255, 255, 255, 0.6)',
       fallback: n[50],
-      shadow: 'rgba(0, 0, 0, 0.14)',
+      shadow: 'rgba(0, 0, 0, 0.03)',
       lens: 'rgba(0, 0, 0, 0.07)',
       lensActive: 'rgba(255, 255, 255, 0.28)',
       lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.7)',
-      lensRim: 'rgba(0, 0, 0, 0.25)',
+      lensRim: 'rgba(0, 0, 0, 0.1)',
+      barRim: 'rgba(0, 0, 0, 0.2)',
       pressFill: 'rgba(0, 0, 0, 0.18)',
-      pressLift: 'rgba(0, 0, 0, 0.05)',
+      pressLift: 'rgba(255, 255, 255, 0.25)',
       lensTint: 'rgba(255, 255, 255, 0.15)',
       tabAccent: a[700],
       lensGlow:
@@ -414,7 +417,7 @@ export const glass = {
   falloff: 2,
   dispersion: 0,
   saturation: 1.4,
-  adaptive: { dark: 0.9, light: 0.5 },
+  adaptive: { dark: 0.9, light: 0.05 },
   lightAngle: 30,
   specular: 0,
   highlightWidth: 2,
@@ -436,7 +439,7 @@ export const glass = {
   lensDispersion: 0.95,
   lensMagnify: 0.2,
   lensSpecular: 0.22,
-  lensEdgeShade: -0.45,
+  lensEdgeShade: { dark: -0.45, light: -0.1 },
   lensShadeWidth: 1,
   liftBlend: 0,
   meltBlend: 12,
