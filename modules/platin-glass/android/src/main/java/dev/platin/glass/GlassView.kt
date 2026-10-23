@@ -1,11 +1,18 @@
 package dev.platin.glass
 
+import android.app.ActivityManager
 import android.content.Context
 import android.database.ContentObserver
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RadialGradient
+import android.graphics.RectF
 import android.graphics.RenderEffect
+import android.graphics.RenderNode
 import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.os.Build
@@ -80,6 +87,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var rim: Color = TRANSPARENT
   var fallback: Color = TRANSPARENT
   var shadow: Color = TRANSPARENT
+  var plain = false
 
   private val density = resources.displayMetrics.density
   private val selfToGlobal = Matrix()
@@ -101,6 +109,23 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     } else {
       null
     }
+
+  private val lowRam =
+    (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice ?: false
+  private val plainNode: RenderNode? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("PlatinGlassPlain") else null
+  private var plainBlur = -1f
+  private val plainPath = Path()
+  private val shapePath = Path()
+  private val clipPath = Path()
+  private val shapeRect = RectF()
+  private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+  private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+  private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+  private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+  private val usesShader: Boolean
+    get() = shader != null && !lowRam && !plain
 
   private val preDraw = ViewTreeObserver.OnPreDrawListener {
     invalidate()
@@ -191,6 +216,13 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   }
 
   fun updateEffect() {
+    if (!usesShader) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setRenderEffect(null)
+      lastState.fill(Float.NaN)
+      effect = null
+      invalidate()
+      return
+    }
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
     val opaque = reducedTransparency && fallback.alpha() > 0f
     val blurPx = if (opaque) 0f else blurRadius * density
@@ -343,13 +375,153 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
 
   override fun onDraw(canvas: Canvas) {
     super.onDraw(canvas)
+    if (!usesShader) {
+      drawPlain(canvas)
+      return
+    }
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !canvas.isHardwareAccelerated) return
+    if (!prepareBackdrop()) return
+    drawBackdrops(canvas)
+  }
+
+  private fun prepareBackdrop(): Boolean {
     selfToGlobal.reset()
     transformMatrixToGlobal(selfToGlobal)
-    if (!selfToGlobal.invert(inverse)) return
+    return selfToGlobal.invert(inverse)
+  }
+
+  private fun drawBackdrops(canvas: Canvas) {
     underlay?.let { drawBackdrop(canvas, it) }
     drawBackdrop(canvas, group)
     overlay?.let { drawBackdrop(canvas, it) }
+  }
+
+  private fun buildPlainPath(): Boolean {
+    val count = fillShapes()
+    plainPath.reset()
+    val corner = cornerRadius * density
+    var any = false
+    for (i in 0 until count) {
+      val left = shapeBuffer[i * 4]
+      val top = shapeBuffer[i * 4 + 1]
+      val right = shapeBuffer[i * 4 + 2]
+      val bottom = shapeBuffer[i * 4 + 3]
+      if (right - left <= 0f || bottom - top <= 0f) continue
+      shapeRect.set(left, top, right, bottom)
+      shapePath.reset()
+      if (i == 0 && ellipse >= 0.5f) {
+        shapePath.addOval(shapeRect, Path.Direction.CW)
+      } else {
+        var r = min(right - left, bottom - top) * 0.5f
+        if (corner > 0f) r = min(r, corner)
+        shapePath.addRoundRect(shapeRect, r, r, Path.Direction.CW)
+      }
+      if (any) plainPath.op(shapePath, Path.Op.UNION) else plainPath.set(shapePath)
+      any = true
+    }
+    if (any && clipOn >= 0.5f) {
+      val sx = clipScaleX.coerceAtLeast(0.01f)
+      val sy = clipScaleY.coerceAtLeast(0.01f)
+      val cl = clipLeft * density
+      val ct = clipTop * density
+      val cr = clipRight * density
+      val cb = clipBottom * density
+      val r = min(cr - cl, cb - ct).coerceAtLeast(0f) * 0.5f
+      shapeRect.set(width * 0.5f + cl / sx, height * 0.5f + ct / sy, width * 0.5f + cr / sx, height * 0.5f + cb / sy)
+      clipPath.reset()
+      clipPath.addRoundRect(shapeRect, r / sx, r / sy, Path.Direction.CW)
+      plainPath.op(clipPath, Path.Op.INTERSECT)
+    }
+    return any
+  }
+
+  private fun drawEdge(canvas: Canvas, depth: Float, strength: Float) {
+    if (depth <= 0f || strength <= 0f) return
+    val peak = Color.argb(strength.coerceIn(0f, 1f), 1f, 1f, 1f)
+    strokePaint.shader = LinearGradient(
+      0f,
+      shapeRect.top,
+      0f,
+      shapeRect.bottom,
+      intArrayOf(peak, Color.TRANSPARENT, Color.TRANSPARENT, peak),
+      EDGE_STOPS,
+      Shader.TileMode.CLAMP,
+    )
+    strokePaint.color = Color.WHITE
+    strokePaint.strokeWidth = depth * 2f
+    canvas.drawPath(plainPath, strokePaint)
+  }
+
+  private fun drawPlain(canvas: Canvas) {
+    if (width <= 0 || height <= 0 || !buildPlainPath()) return
+    val opaque = reducedTransparency && fallback.alpha() > 0f
+    val blurPx = if (opaque) 0f else blurRadius * density
+    val canBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && canvas.isHardwareAccelerated && plainNode != null
+
+    if (shadow.alpha() > 0f && shadowRadius > 0f) {
+      canvas.save()
+      canvas.clipOutPath(plainPath)
+      shadowPaint.color = Color.BLACK
+      shadowPaint.setShadowLayer(shadowRadius * density, 0f, shadowOffset * density, shadow.toArgb())
+      canvas.drawPath(plainPath, shadowPaint)
+      canvas.restore()
+    }
+
+    if (canBlur && !opaque && prepareBackdrop()) {
+      val node = plainNode!!
+      node.setPosition(0, 0, width, height)
+      if (blurPx != plainBlur) {
+        node.setRenderEffect(blur(blurPx))
+        plainBlur = blurPx
+      }
+      val recording = node.beginRecording(width, height)
+      try {
+        drawBackdrops(recording)
+      } finally {
+        node.endRecording()
+      }
+      canvas.save()
+      canvas.clipPath(plainPath)
+      canvas.drawRenderNode(node)
+      canvas.restore()
+      fillPaint.color = tint.toArgb()
+    } else {
+      fillPaint.color = (if (fallback.alpha() > 0f) fallback else tint).toArgb()
+    }
+    canvas.drawPath(plainPath, fillPaint)
+
+    if (adaptive > 0f && !opaque) {
+      val lightTint = 0.2126f * tint.red() + 0.7152f * tint.green() + 0.0722f * tint.blue() > 0.5f
+      fillPaint.color =
+        if (lightTint) Color.argb(ADAPTIVE_DARKEN * adaptive, 0f, 0f, 0f) else Color.argb(ADAPTIVE_LIFT * adaptive, 1f, 1f, 1f)
+      canvas.drawPath(plainPath, fillPaint)
+    }
+
+    if (glowStrength > 0f && !opaque && glowSpread > 0f) {
+      val spread = glowSpread * density * GLOW_REACH
+      val peak = Color.argb(glowStrength.coerceIn(0f, 1f), 1f, 1f, 1f)
+      glowPaint.shader = RadialGradient(glowX * density, glowY * density, spread, peak, Color.TRANSPARENT, Shader.TileMode.CLAMP)
+      canvas.drawPath(plainPath, glowPaint)
+    }
+
+    if (edgeSharp > 0f || edgeSoft > 0f) {
+      plainPath.computeBounds(shapeRect, false)
+      canvas.save()
+      canvas.clipPath(plainPath)
+      drawEdge(canvas, softWidth * density, edgeSoft * EDGE_SOFT_STRENGTH)
+      drawEdge(canvas, sharpWidth * density, edgeSharp * EDGE_SHARP_STRENGTH)
+      canvas.restore()
+      strokePaint.shader = null
+    }
+
+    if (rim.alpha() > 0f) {
+      canvas.save()
+      if (rimOutside) canvas.clipOutPath(plainPath) else canvas.clipPath(plainPath)
+      strokePaint.strokeWidth = rimWidth * 2f
+      strokePaint.color = rim.toArgb()
+      canvas.drawPath(plainPath, strokePaint)
+      canvas.restore()
+    }
   }
 
   private fun drawBackdrop(canvas: Canvas, name: String) {
@@ -377,6 +549,12 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     const val REFRACTION_RATIO = 0.7f
     const val HIGHLIGHT_RATIO = 0.05f
     const val MIN_BAND = 2f
+    const val GLOW_REACH = 2.5f
+    const val EDGE_SHARP_STRENGTH = 1.2f
+    const val EDGE_SOFT_STRENGTH = 0.6f
+    val EDGE_STOPS = floatArrayOf(0f, 0.3f, 0.7f, 1f)
+    const val ADAPTIVE_LIFT = 0.14f
+    const val ADAPTIVE_DARKEN = 0.22f
     const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 53 + 12
   }
 }

@@ -183,11 +183,7 @@ export interface Palette {
     lensGlow: string;
     lensRim: string;
     barRim: string;
-    solidFill: string;
-    solidFillOpaque: string;
-    solidRim: string;
     pressFill: string;
-    solidPressFill: string;
     pressLift: string;
     lensTint: string;
     tabAccent: string;
@@ -249,11 +245,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.06)',
       lensRim: 'rgba(255, 255, 255, 0.16)',
       barRim: 'rgba(255, 255, 255, 0)',
-      solidFill: 'rgba(30, 30, 30, 0.82)',
-      solidFillOpaque: 'rgb(30, 30, 30)',
-      solidRim: 'rgba(255, 255, 255, 0.08)',
       pressFill: 'rgba(255, 255, 255, 0.38)',
-      solidPressFill: 'rgba(255, 255, 255, 0.38)',
       pressLift: 'rgba(255, 255, 255, 0.038)',
       lensTint: 'rgba(255, 255, 255, 0.035)',
       tabAccent: '#F8A154',
@@ -315,11 +307,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.7)',
       lensRim: 'rgba(0, 0, 0, 0.1)',
       barRim: 'rgba(0, 0, 0, 0.1)',
-      solidFill: 'rgba(250, 250, 250, 0.85)',
-      solidFillOpaque: 'rgb(250, 250, 250)',
-      solidRim: 'rgba(0, 0, 0, 0.12)',
       pressFill: 'rgba(255, 255, 255, 1)',
-      solidPressFill: 'rgba(0, 0, 0, 0.18)',
       pressLift: 'rgba(255, 255, 255, 0.25)',
       lensTint: 'rgba(255, 255, 255, 0.15)',
       tabAccent: a[700],
@@ -450,9 +438,6 @@ export const glass = {
   insetBlur: 10,
   lensBlurRadius: 0,
   popBlend: 22,
-  solidBlur: 14,
-  solidPress: 0.35,
-  solidShadow: '0 6px 16px',
   lensBezel: 10,
   lensRefraction: 7,
   lensRefractionYScale: 1,
@@ -560,7 +545,7 @@ export const motion = {
   backTravel: { handoff: 0.001, settle: 0.995, textRate: 2, textDelay: 0.6 },
   searchClose: { fadeFrom: 0.35 },
   searchMorph: { heightLag: 2.2, openVelocity: 3 },
-  searchBump: { at: 0.3, backAt: 0.55, overshoot: 3, pushLeft: 4, pushRight: 1, swell: 0.6, backSquish: 4 },
+  searchBump: { at: 0.55, overshoot: 3, squish: 4 },
   searchTabs: { fade: 1, closeFade: 1, blur: 10, pressFade: 1.5, textBlur: 8 },
   searchPop: { delay: 110, shift: 28, hiddenScale: 0.96, tuckScale: 0.78, glyphScale: 1 },
   pressSquashX: 0,

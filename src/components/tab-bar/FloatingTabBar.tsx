@@ -19,6 +19,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedNativeGlassBlur, AnimatedNativeGlassView, NativeGlassBackdrop } from '@/components/glass/NativeGlass';
+import { forcePlainGlass } from '@/components/glass/plainGlass';
 import { useGlassStyle } from '@/components/glass/useGlassStyle';
 import { Icon } from '@/components/icon/Icon';
 import { useKeyboardHeight } from '@/components/keyboard/useKeyboardHeight';
@@ -316,7 +317,7 @@ export const FloatingTabBar = () => {
   );
 
   useAnimatedReaction(
-    () => modeTarget.get() === 0 && searchMode.get() < motion.searchBump.at,
+    () => modeTarget.get() === 0 && searchMode.get() < 1 - motion.searchBump.at,
     (hit, previous) => {
       if (hit && previous === false) {
         searchBump.set(
@@ -327,7 +328,7 @@ export const FloatingTabBar = () => {
   );
 
   useAnimatedReaction(
-    () => modeTarget.get() === 1 && searchMode.get() > motion.searchBump.backAt,
+    () => modeTarget.get() === 1 && searchMode.get() > motion.searchBump.at,
     (hit, previous) => {
       if (hit && previous === false) {
         backBump.set(
@@ -802,8 +803,7 @@ export const FloatingTabBar = () => {
   const searchContentStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        translateX:
-          searchShiftX.get() + searchBump.get() * (motion.searchBump.pushLeft + motion.searchBump.pushRight) * 0.5,
+        translateX: searchShiftX.get(),
       },
       { translateY: barShiftY.get() },
       { scale: searchScale.get() },
@@ -842,7 +842,7 @@ export const FloatingTabBar = () => {
       lerp(pillRight, pillLeft + modeInset + modeHeight, settled) +
       backGrow +
       bump * motion.searchBump.overshoot -
-      backBump.get() * motion.searchBump.backSquish;
+      backBump.get() * motion.searchBump.squish;
     const backTop = lerp(pillTop, modeInset, settledY) - backGrow;
     const backBottom = lerp(fullHeight + grow, fullHeight - modeInset, settledY) + backGrow;
 
@@ -893,11 +893,13 @@ export const FloatingTabBar = () => {
         backTop + pad,
         backRight + pad,
         backBottom + pad,
-        circleX - fieldRadius + bump * motion.searchBump.pushLeft + pad,
-        circleY - fieldRadius - bump * motion.searchBump.swell + pad,
-        circleX + fieldRadius + bump * motion.searchBump.pushRight + pad,
-        circleY + fieldRadius + bump * motion.searchBump.swell + pad,
-        ...(mode > 0 ? [fieldLeft + pad, fieldTop + pad, fieldRight + pad, fieldBottom + pad] : []),
+        circleX - fieldRadius + bump * motion.searchBump.squish + pad,
+        circleY - fieldRadius + pad,
+        circleX + fieldRadius + pad,
+        circleY + fieldRadius + pad,
+        ...(mode > 0
+          ? [fieldLeft + bump * motion.searchBump.squish + pad, fieldTop + pad, fieldRight + pad, fieldBottom + pad]
+          : []),
       ],
     };
   });
@@ -1096,6 +1098,7 @@ export const FloatingTabBar = () => {
             underlay={screenGroup}
             overlay={revealGroup}
             inset={glass.lensPad}
+            plain={forcePlainGlass}
             refractionYScale={glass.lensRefractionYScale}
             cornerRadius={lensFullHeight / 2}
             blurRadius={glass.lensBlurRadius}

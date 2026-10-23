@@ -1,22 +1,12 @@
 package dev.platin.glass
 
-import android.app.ActivityManager
-import android.content.Context
 import android.graphics.Color
-import android.graphics.RuntimeShader
-import android.os.Build
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class GlassModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("PlatinGlass")
-
-    Constant("glassSupported") {
-      val context = appContext.reactContext
-      val lowRam = (context?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice ?: false
-      !lowRam && shaderCompiles()
-    }
 
     View(GlassBackdropView::class) {
       Name("PlatinGlassBackdropView")
@@ -100,6 +90,7 @@ class GlassModule : Module() {
       Prop("rim") { view: GlassView, value: Color? -> view.rim = value ?: TRANSPARENT }
       Prop("fallback") { view: GlassView, value: Color? -> view.fallback = value ?: TRANSPARENT }
       Prop("shadow") { view: GlassView, value: Color? -> view.shadow = value ?: TRANSPARENT }
+      Prop("plain") { view: GlassView, value: Boolean? -> view.plain = value ?: false }
 
       OnViewDidUpdateProps { view: GlassView ->
         view.updateEffect()
@@ -111,12 +102,3 @@ class GlassModule : Module() {
     val TRANSPARENT: Color = Color.valueOf(0f, 0f, 0f, 0f)
   }
 }
-
-private fun shaderCompiles(): Boolean =
-  Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-    try {
-      RuntimeShader(GLASS_SHADER)
-      true
-    } catch (_: Exception) {
-      false
-    }

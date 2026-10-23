@@ -62,6 +62,7 @@ export interface NativeGlassViewProps extends ViewProps {
   rim?: ColorValue;
   fallback?: ColorValue;
   shadow?: ColorValue;
+  plain?: boolean;
 }
 
 interface NativeGlassBlurProps extends ViewProps {

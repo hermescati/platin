@@ -1,3 +1,4 @@
+import { forcePlainGlass } from '@/components/glass/plainGlass';
 import { glass } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -32,5 +33,6 @@ export const useGlassStyle = () => {
     insetShade: glass.insetShade[scheme],
     insetOffset: glass.insetOffset,
     insetBlur: glass.insetBlur,
+    plain: forcePlainGlass,
   };
 };

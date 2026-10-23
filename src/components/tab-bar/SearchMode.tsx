@@ -1,11 +1,6 @@
 import { useEffect, useRef, type ComponentRef } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
-import Animated, {
-  useAnimatedProps,
-  useAnimatedStyle,
-  useSharedValue,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedProps, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 import { AnimatedNativeGlassBlur } from '@/components/glass/NativeGlass';
 
@@ -35,7 +30,7 @@ interface Props {
   mode: SharedValue<number>;
   backTab: TabConfig;
   backPress: ReturnType<typeof useGlassPress>;
-  travel?: {
+  travel: {
     index: number;
     slotWidth: SharedValue<number>;
     circle: SharedValue<number>;
@@ -61,87 +56,57 @@ export const SearchMode = ({ active, mode, backTab, backPress, travel, onBack }:
     return () => cancelAnimationFrame(frame);
   }, [active]);
 
-  const travelIndex = travel?.index ?? 0;
-  const travelWidth = travel?.slotWidth;
-  const travelCircle = travel?.circle;
-  const travelPress = travel?.press;
-  const travelTarget = travel?.target;
-  const travelFit = travel?.fit;
+  const { index: travelIndex, slotWidth, circle, press: travelPress, target, fit: rowFit } = travel;
   const backStyle = useAnimatedStyle(() => ({
-    opacity: travelWidth ? (mode.get() > motion.backTravel.handoff ? 1 : 0) : clamp01(mode.get() * 2 - 0.6),
+    opacity: mode.get() > motion.backTravel.handoff ? 1 : 0,
     transform: [{ scale: 1 + backPress.press.get() * motion.pressGrow }],
   }));
   const backOutlineStyle = useAnimatedStyle(() => ({
-    opacity: travelTarget && travelTarget.get() === 0 ? 0 : 1,
+    opacity: target.get() === 0 ? 0 : 1,
   }));
   const backFilledStyle = useAnimatedStyle(() => ({
-    opacity: travelTarget && travelTarget.get() === 0 ? 1 : 0,
+    opacity: target.get() === 0 ? 1 : 0,
   }));
   const backFillStyle = useAnimatedStyle(() => ({ opacity: backPress.press.get() }));
   const backInkStyle = useAnimatedStyle(() => {
-    const away = travelWidth ? 1 - clamp01(mode.get()) : 0;
-    const fit = travelFit ? travelFit.get() : { scale: 1, x: 0, y: 0 };
-    const fromX = travelWidth
-      ? fit.x + fit.scale * (layout.tabBarInlinePadding + (travelIndex + 0.5) * travelWidth.get()) - backCenter
-      : 0;
+    const away = 1 - clamp01(mode.get());
+    const fit = rowFit.get();
+    const fromX = fit.x + fit.scale * (layout.tabBarInlinePadding + (travelIndex + 0.5) * slotWidth.get()) - backCenter;
     const fromY = fit.y + fit.scale * (fullHeight - layout.tabLabelHeight) * 0.5 - backCenter;
     return {
       opacity: 1 - backPress.press.get() * iconDim,
       transform: [{ translateX: fromX * away }, { translateY: fromY * away }],
     };
   });
-  const rowWidth = useSharedValue(0);
-  const fieldStyle = useAnimatedStyle(() => {
-    if (!travelWidth) {
-      return { opacity: clamp01(mode.get() * 2 - 1) };
-    }
-    return {
-      transform: [
-        {
-          translateX:
-            ((travelCircle ? travelCircle.get() : rowWidth.get() - fullHeight / 2) - glyphCenter) *
-            (1 - clamp01(mode.get())),
-        },
-      ],
-    };
-  });
-  const glyphStyle = useAnimatedStyle(() =>
-    travelWidth
-      ? {
-          opacity: mode.get() > motion.backTravel.handoff ? 1 : 0,
-          transform: [
-            {
-              scale:
-                1 +
-                (glyphFromScale * (1 + (travelPress ? travelPress.get() : 0) * motion.pressGrow) - 1) *
-                  (1 - clamp01(mode.get())),
-            },
-          ],
-        }
-      : {},
-  );
+  const fieldStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (circle.get() - glyphCenter) * (1 - clamp01(mode.get())) }],
+  }));
+  const glyphStyle = useAnimatedStyle(() => ({
+    opacity: mode.get() > motion.backTravel.handoff ? 1 : 0,
+    transform: [
+      {
+        scale: 1 + (glyphFromScale * (1 + travelPress.get() * motion.pressGrow) - 1) * (1 - clamp01(mode.get())),
+      },
+    ],
+  }));
   const glyphAccentStyle = useAnimatedStyle(() => ({
-    opacity: travelTarget && travelTarget.get() === 1 ? 1 - clamp01(mode.get() * motion.searchTabs.pressFade) : 0,
+    opacity: target.get() === 1 ? 1 - clamp01(mode.get() * motion.searchTabs.pressFade) : 0,
   }));
   const textStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: textFrom * (1 - clamp01(mode.get())) }],
     opacity:
       mode.get() >= motion.backTravel.settle
         ? 0
-        : !travelTarget || travelTarget.get() === 1
+        : target.get() === 1
           ? clamp01(mode.get() * motion.backTravel.textRate - motion.backTravel.textDelay)
           : clamp01((mode.get() - motion.searchClose.fadeFrom) / (1 - motion.searchClose.fadeFrom)),
   }));
   const inputStyle = useAnimatedStyle(() => ({
-    opacity: !travelWidth || mode.get() >= motion.backTravel.settle ? 1 : 0,
+    opacity: mode.get() >= motion.backTravel.settle ? 1 : 0,
   }));
   const textBlurProps = useAnimatedProps(() => ({
-    radius: travelWidth ? (1 - clamp01(mode.get())) * motion.searchTabs.textBlur : 0,
+    radius: (1 - clamp01(mode.get())) * motion.searchTabs.textBlur,
   }));
-
-  const onRowLayout = (event: LayoutChangeEvent) => {
-    rowWidth.set(event.nativeEvent.layout.width);
-  };
 
   const goBack = () => {
     Keyboard.dismiss();
@@ -149,7 +114,7 @@ export const SearchMode = ({ active, mode, backTab, backPress, travel, onBack }:
   };
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents={active ? 'box-none' : 'none'} onLayout={onRowLayout}>
+    <View style={StyleSheet.absoluteFill} pointerEvents={active ? 'box-none' : 'none'}>
       <Pressable
         style={styles.back}
         onPress={goBack}
@@ -192,22 +157,17 @@ export const SearchMode = ({ active, mode, backTab, backPress, travel, onBack }:
               numberOfLines={1}
             />
           </Animated.View>
-          {travelWidth && (
-            <AnimatedNativeGlassBlur
-              style={[styles.layer, textStyle]}
-              animatedProps={textBlurProps}
-              pointerEvents="none">
-              <Text
-                style={[
-                  styles.input,
-                  searchFieldText[scheme],
-                  { color: query ? color.text.primary : color.text.placeholder },
-                ]}
-                numberOfLines={1}>
-                {query || searchPlaceholder}
-              </Text>
-            </AnimatedNativeGlassBlur>
-          )}
+          <AnimatedNativeGlassBlur style={[styles.layer, textStyle]} animatedProps={textBlurProps} pointerEvents="none">
+            <Text
+              style={[
+                styles.input,
+                searchFieldText[scheme],
+                { color: query ? color.text.primary : color.text.placeholder },
+              ]}
+              numberOfLines={1}>
+              {query || searchPlaceholder}
+            </Text>
+          </AnimatedNativeGlassBlur>
         </View>
       </Animated.View>
     </View>
