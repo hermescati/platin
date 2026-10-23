@@ -232,6 +232,7 @@ export const FloatingTabBar = () => {
   const nudge = useSharedValue(0);
   const pressSquash = useSharedValue(0);
   const searchMode = useSharedValue(searchFocused ? 1 : 0);
+  const searchPop = useSharedValue(searchFocused ? 1 : 0);
   const moving = useSharedValue(0);
   const push = useSharedValue(0);
   const jelly = useSharedValue(0);
@@ -283,8 +284,14 @@ export const FloatingTabBar = () => {
   }, [focusedIndex, focused, settledIndex, dragIndex, lensPosition, lensPresence, collapse]);
 
   useEffect(() => {
-    searchMode.set(withSpring(searchFocused ? 1 : 0, motion.springs.searchMorph));
-  }, [searchFocused, searchMode]);
+    if (searchFocused) {
+      searchMode.set(withSpring(1, motion.springs.searchMorph));
+      searchPop.set(withDelay(motion.searchPop.delay, withSpring(1, motion.springs.searchPop)));
+    } else {
+      searchPop.set(withSpring(0, motion.springs.searchAbsorb));
+      searchMode.set(withDelay(motion.searchPop.closeDelay, withSpring(0, motion.springs.searchMorph)));
+    }
+  }, [searchFocused, searchMode, searchPop]);
 
   const selectTab = (index: number) => {
     requestAnimationFrame(() => switchTab(tabs[index].name, {}));
@@ -646,7 +653,9 @@ export const FloatingTabBar = () => {
       scaleY.get() * lerp(1, modeShrink, clamp01(searchMode.get())) * (1 + searchPress.press.get() * motion.pressGrow),
   );
   const searchFillStyle = useAnimatedStyle(() => ({
-    opacity: searchPress.press.get(),
+    opacity:
+      searchPress.press.get() *
+      (searchMode.get() < 0.5 ? 1 - clamp01(searchMode.get() * 4) : clamp01((searchPop.get() - 0.75) * 4)),
   }));
   const searchInkStyle = useAnimatedStyle(() => ({
     opacity: 1 - searchPress.press.get() * motion.pressIconDim,
@@ -682,7 +691,8 @@ export const FloatingTabBar = () => {
     }
     const mode = searchMode.get();
     const settled = clamp01(mode);
-    const detach = clamp01((mode - motion.searchDetach) / (1 - motion.searchDetach));
+    const pop = searchPop.get();
+    const popPlace = clamp01(pop);
     const pad = glass.pad;
 
     const growX = barPress.get() * motion.barGrow.x * (1 - settled);
@@ -697,18 +707,26 @@ export const FloatingTabBar = () => {
     const backBottom = lerp(fullHeight + grow, fullHeight - modeInset, settled) + backGrow;
 
     const slide = -width * (1 - scaleX.get()) + centerShiftX.get();
-    const circleX = width + layout.tabBarGap + slide + fullHeight / 2 + searchShiftX.get();
+    const searchX = width + layout.tabBarGap + slide + fullHeight / 2 + searchShiftX.get();
     const circleY = fullHeight / 2 + barShiftY.get();
-    const circleRadius = (fullHeight / 2) * searchScale.get();
+    const searchRadius = (fullHeight / 2) * searchScale.get();
+    const fieldEnd = searchX + searchRadius - motion.searchPop.shift * settled;
+    const circleX = lerp(searchX, lerp(searchX - motion.searchPop.shift, searchX, popPlace), settled);
+    const circleRadius = lerp(
+      searchRadius,
+      lerp(searchRadius * motion.searchPop.hiddenScale, searchRadius, pop),
+      settled,
+    );
 
-    const fieldLeft = lerp(circleX - circleRadius, pillLeft + modeInset + modeHeight + layout.searchModeGap, settled);
-    const fieldRight = lerp(circleX + circleRadius, circleX - modeRadius - layout.searchModeGap, detach);
-    const fieldTop = lerp(circleY - circleRadius, modeInset, settled);
-    const fieldBottom = lerp(circleY + circleRadius, fullHeight - modeInset, settled);
+    const fieldLeft = lerp(searchX - searchRadius, pillLeft + modeInset + modeHeight + layout.searchModeGap, settled);
+    const fieldRight = lerp(fieldEnd, searchX - modeRadius - layout.searchModeGap, popPlace);
+    const fieldTop = lerp(circleY - searchRadius, modeInset, settled);
+    const fieldBottom = lerp(circleY + searchRadius, fullHeight - modeInset, settled);
 
     return {
       blend: Math.max(
         glass.blend * clamp01(mode * 3),
+        glass.popBlend * Math.sin(Math.PI * popPlace) * settled,
         glass.liftBlend *
           lift.get() *
           (1 - settled) *
@@ -743,9 +761,17 @@ export const FloatingTabBar = () => {
   const searchGlyphStyle = useAnimatedStyle(() => ({
     opacity: 1 - clamp01(searchMode.get() * 2),
   }));
-  const closeGlyphStyle = useAnimatedStyle(() => ({
-    opacity: clamp01(searchMode.get() * 2 - 1),
-  }));
+  const closeGlyphStyle = useAnimatedStyle(() => {
+    const settled = clamp01(searchMode.get());
+    const pop = clamp01(searchPop.get());
+    return {
+      opacity: clamp01(searchMode.get() * 2 - 1),
+      transform: [
+        { translateX: (-motion.searchPop.shift * (1 - pop) * settled) / Math.max(searchScale.get(), 0.01) },
+        { scale: lerp(motion.searchPop.glyphScale, 1, pop) },
+      ],
+    };
+  });
 
   const pressScaleStyle = useAnimatedStyle(() => {
     const width = Math.max(barWidth.get(), 1);

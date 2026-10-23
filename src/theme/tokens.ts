@@ -183,6 +183,9 @@ export interface Palette {
     lensGlow: string;
     lensRim: string;
     barRim: string;
+    solidFill: string;
+    solidFillOpaque: string;
+    solidRim: string;
     pressFill: string;
     pressLift: string;
     lensTint: string;
@@ -245,6 +248,9 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.06)',
       lensRim: 'rgba(255, 255, 255, 0.16)',
       barRim: 'rgba(255, 255, 255, 0)',
+      solidFill: 'rgba(30, 30, 30, 0.82)',
+      solidFillOpaque: 'rgb(30, 30, 30)',
+      solidRim: 'rgba(255, 255, 255, 0.08)',
       pressFill: 'rgba(255, 255, 255, 0.38)',
       pressLift: 'rgba(255, 255, 255, 0.038)',
       lensTint: 'rgba(255, 255, 255, 0.035)',
@@ -307,6 +313,9 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.7)',
       lensRim: 'rgba(0, 0, 0, 0.1)',
       barRim: 'rgba(0, 0, 0, 0.2)',
+      solidFill: 'rgba(250, 250, 250, 0.85)',
+      solidFillOpaque: 'rgb(250, 250, 250)',
+      solidRim: 'rgba(0, 0, 0, 0.12)',
       pressFill: 'rgba(0, 0, 0, 0.18)',
       pressLift: 'rgba(255, 255, 255, 0.25)',
       lensTint: 'rgba(255, 255, 255, 0.15)',
@@ -426,6 +435,10 @@ export const glass = {
   sharpWidth: 0.6,
   softWidth: 1.5,
   lensBlurRadius: 0,
+  popBlend: 22,
+  solidBlur: 14,
+  solidPress: 0.35,
+  solidShadow: '0 6px 16px',
   lensBezel: 10,
   lensRefraction: 7,
   lensRefractionYScale: 1,
@@ -464,6 +477,8 @@ export const motion = {
     edgeTrail: { duration: 320, dampingRatio: 0.85 },
     edgeSettle: { duration: 320, dampingRatio: 1 },
     searchMorph: { duration: 280, dampingRatio: 1 },
+    searchPop: { duration: 420, dampingRatio: 1 },
+    searchAbsorb: { duration: 160, dampingRatio: 1 },
     press: { duration: 160, dampingRatio: 1 },
     stretch: { duration: 340, dampingRatio: 0.55 },
     jellyLead: { duration: 240, dampingRatio: 0.75 },
@@ -523,7 +538,7 @@ export const motion = {
   tapHold: 100,
   pressGrow: 0.26,
   pressIconDim: 0.4,
-  searchDetach: 0.35,
+  searchPop: { delay: 110, closeDelay: 70, shift: 28, hiddenScale: 0.96, glyphScale: 1 },
   pressSquashX: 0,
   pressSquashY: 0,
   nudgeMax: 4,

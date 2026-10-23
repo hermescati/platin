@@ -5,7 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { GlassBackdrop } from '@/components/glass/GlassBackdrop';
 import { KeyboardRoot } from '@/components/keyboard/KeyboardRoot';
 import { SearchQueryProvider } from '@/components/search/SearchQuery';
-import { FloatingTabBar } from '@/components/tab-bar/FloatingTabBar';
+import { TabBar } from '@/components/tab-bar/TabBar';
 import { TabBarCollapseProvider } from '@/components/tab-bar/TabBarCollapse';
 import { allTabs } from '@/components/tab-bar/tabs';
 
@@ -18,7 +18,7 @@ const TabsLayout = () => (
             <GlassBackdrop>
               <TabSlot />
             </GlassBackdrop>
-            <FloatingTabBar />
+            <TabBar />
             <TabList style={styles.hidden}>
               {allTabs.map((tab) => (
                 <TabTrigger key={tab.name} name={tab.name} href={tab.href} />
