@@ -64,6 +64,10 @@ export interface NativeGlassViewProps extends ViewProps {
   shadow?: ColorValue;
 }
 
+interface NativeGlassBlurProps extends ViewProps {
+  radius?: number;
+}
+
 interface NativeGlassBackdropProps extends ViewProps {
   group?: string;
   offscreen?: boolean;
@@ -74,3 +78,7 @@ export const NativeGlassView = requireNativeView<NativeGlassViewProps>('PlatinGl
 export const AnimatedNativeGlassView = Animated.createAnimatedComponent(NativeGlassView);
 
 export const NativeGlassBackdrop = requireNativeView<NativeGlassBackdropProps>('PlatinGlass', 'PlatinGlassBackdropView');
+
+export const NativeGlassBlur = requireNativeView<NativeGlassBlurProps>('PlatinGlass', 'PlatinGlassBlurView');
+
+export const AnimatedNativeGlassBlur = Animated.createAnimatedComponent(NativeGlassBlur);

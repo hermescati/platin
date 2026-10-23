@@ -330,6 +330,11 @@ export const palettes: Record<ColorSchemeName, Palette> = {
   },
 };
 
+export const searchFieldText = {
+  dark: { fontWeight: '400' },
+  light: { fontWeight: '500' },
+} as const;
+
 export const typography = {
   display: { fontSize: 40, lineHeight: 44, fontFamily: fonts.brand },
   largeTitle: { fontSize: 34, lineHeight: 40, fontFamily: fonts.brand },
@@ -486,10 +491,14 @@ export const motion = {
     edgeLead: { duration: 200, dampingRatio: 1 },
     edgeTrail: { duration: 320, dampingRatio: 0.85 },
     edgeSettle: { duration: 320, dampingRatio: 1 },
-    searchMorph: { duration: 280, dampingRatio: 1 },
+    searchMorph: { duration: 220, dampingRatio: 1 },
+    searchOpen: { duration: 380, dampingRatio: 1 },
+    searchBumpIn: { duration: 110, dampingRatio: 1 },
+    searchBumpOut: { duration: 300, dampingRatio: 1 },
     searchPop: { duration: 420, dampingRatio: 1 },
     searchAbsorb: { duration: 160, dampingRatio: 1 },
     press: { duration: 160, dampingRatio: 1 },
+    closeFlash: { duration: 300, dampingRatio: 1 },
     stretch: { duration: 340, dampingRatio: 0.55 },
     jellyLead: { duration: 240, dampingRatio: 0.75 },
     barPressIn: { duration: 160, dampingRatio: 1 },
@@ -548,7 +557,12 @@ export const motion = {
   tapHold: 100,
   pressGrow: 0.26,
   pressIconDim: { dark: 0.4, light: 0.9 },
-  searchPop: { delay: 110, closeDelay: 70, shift: 28, hiddenScale: 0.96, glyphScale: 1 },
+  backTravel: { handoff: 0.001, settle: 0.995, textRate: 2, textDelay: 0.6 },
+  searchClose: { fadeFrom: 0.35 },
+  searchMorph: { heightLag: 2.2, openVelocity: 3 },
+  searchBump: { at: 0.3, backAt: 0.55, overshoot: 3, pushLeft: 4, pushRight: 1, swell: 0.6, backSquish: 4 },
+  searchTabs: { fade: 1, closeFade: 1, blur: 10, pressFade: 1.5, textBlur: 8 },
+  searchPop: { delay: 110, shift: 28, hiddenScale: 0.96, tuckScale: 0.78, glyphScale: 1 },
   pressSquashX: 0,
   pressSquashY: 0,
   nudgeMax: 4,

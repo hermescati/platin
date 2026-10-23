@@ -1,6 +1,6 @@
 import { AndroidHaptics, performAndroidHapticsAsync } from 'expo-haptics';
 import { useTabTrigger } from 'expo-router/ui';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { AnimatedNativeGlassView, NativeGlassBackdrop } from '@/components/glass/NativeGlass';
+import { AnimatedNativeGlassBlur, AnimatedNativeGlassView, NativeGlassBackdrop } from '@/components/glass/NativeGlass';
 import { useGlassStyle } from '@/components/glass/useGlassStyle';
 import { Icon } from '@/components/icon/Icon';
 import { useKeyboardHeight } from '@/components/keyboard/useKeyboardHeight';
@@ -45,6 +45,8 @@ const modeHeight = layout.searchModeHeight;
 const modeInset = (fullHeight - modeHeight) / 2;
 const modeRadius = modeHeight / 2;
 const modeShrink = modeHeight / fullHeight;
+const fieldGlyphCenter =
+  modeInset + modeHeight + layout.searchModeGap + layout.searchFieldInset + layout.searchFieldIconSize / 2;
 const tabBarGroup = 'tabbar';
 const screenGroup = 'default';
 const revealGroup = 'tabbar-reveal';
@@ -80,6 +82,7 @@ interface TabItemProps {
   itemShift: SharedValue<number>;
   barShiftX: SharedValue<number>;
   barShiftY: SharedValue<number>;
+  handoff?: SharedValue<number>;
   revealed?: boolean;
   onActivate: (index: number) => void;
 }
@@ -96,6 +99,7 @@ const TabItem = ({
   itemShift,
   barShiftX,
   barShiftY,
+  handoff,
   revealed = false,
   onActivate,
 }: TabItemProps) => {
@@ -128,6 +132,9 @@ const TabItem = ({
     opacity: highlight.get() * glow.get(),
   }));
   const idleStyle = useAnimatedStyle(() => ({ opacity: 1 - highlight.get() }));
+  const handoffStyle = useAnimatedStyle(() => ({
+    opacity: handoff && handoff.get() > motion.backTravel.handoff ? 0 : 1,
+  }));
   const activeLabelColor = useAnimatedStyle(() => ({
     color: interpolateColor(glow.get(), [0, 1], [color.accent.default, color.chrome.tabAccent]),
   }));
@@ -145,7 +152,7 @@ const TabItem = ({
       accessibilityActions={[{ name: 'activate' }]}
       onAccessibilityAction={() => onActivate(index)}>
       <Animated.View style={[styles.item, itemStyle]}>
-        <View>
+        <Animated.View style={handoffStyle}>
           <Animated.View style={idleStyle}>
             <Icon name={tab.icon} size={layout.tabIconSize} />
           </Animated.View>
@@ -155,7 +162,7 @@ const TabItem = ({
           <Animated.View style={[StyleSheet.absoluteFill, activeLiftStyle]}>
             <Icon name={tab.icon} variant="fill" size={layout.tabIconSize} color={color.chrome.tabAccent} />
           </Animated.View>
-        </View>
+        </Animated.View>
         <Animated.View style={[styles.labelBox, labelStyle]}>
           <Animated.Text
             style={[
@@ -233,6 +240,9 @@ export const FloatingTabBar = () => {
   const nudge = useSharedValue(0);
   const pressSquash = useSharedValue(0);
   const searchMode = useSharedValue(searchFocused ? 1 : 0);
+  const modeTarget = useSharedValue(searchFocused ? 1 : 0);
+  const searchBump = useSharedValue(0);
+  const backBump = useSharedValue(0);
   const searchPop = useSharedValue(searchFocused ? 1 : 0);
   const moving = useSharedValue(0);
   const push = useSharedValue(0);
@@ -286,15 +296,50 @@ export const FloatingTabBar = () => {
     }
   }, [focusedIndex, focused, settledIndex, dragIndex, lensPosition, lensPresence, collapse]);
 
+  const morphSearch = useCallback(
+    (open: boolean) => {
+      const target = open ? 1 : 0;
+      if (modeTarget.get() === target) {
+        return;
+      }
+      modeTarget.set(target);
+      if (open) {
+        searchBump.set(withSpring(0, motion.springs.searchBumpOut));
+        searchMode.set(withSpring(1, { ...motion.springs.searchOpen, velocity: motion.searchMorph.openVelocity }));
+        searchPop.set(withDelay(motion.searchPop.delay, withSpring(1, motion.springs.searchPop)));
+      } else {
+        searchPop.set(withSpring(0, motion.springs.searchAbsorb));
+        searchMode.set(withSpring(0, motion.springs.searchMorph));
+      }
+    },
+    [modeTarget, searchMode, searchPop, searchBump],
+  );
+
+  useAnimatedReaction(
+    () => modeTarget.get() === 0 && searchMode.get() < motion.searchBump.at,
+    (hit, previous) => {
+      if (hit && previous === false) {
+        searchBump.set(
+          withSequence(withSpring(1, motion.springs.searchBumpIn), withSpring(0, motion.springs.searchBumpOut)),
+        );
+      }
+    },
+  );
+
+  useAnimatedReaction(
+    () => modeTarget.get() === 1 && searchMode.get() > motion.searchBump.backAt,
+    (hit, previous) => {
+      if (hit && previous === false) {
+        backBump.set(
+          withSequence(withSpring(1, motion.springs.searchBumpIn), withSpring(0, motion.springs.searchBumpOut)),
+        );
+      }
+    },
+  );
+
   useEffect(() => {
-    if (searchFocused) {
-      searchMode.set(withSpring(1, motion.springs.searchMorph));
-      searchPop.set(withDelay(motion.searchPop.delay, withSpring(1, motion.springs.searchPop)));
-    } else {
-      searchPop.set(withSpring(0, motion.springs.searchAbsorb));
-      searchMode.set(withDelay(motion.searchPop.closeDelay, withSpring(0, motion.springs.searchMorph)));
-    }
-  }, [searchFocused, searchMode, searchPop]);
+    morphSearch(searchFocused);
+  }, [searchFocused, morphSearch]);
 
   const selectTab = (index: number) => {
     requestAnimationFrame(() => switchTab(tabs[index].name, {}));
@@ -306,15 +351,24 @@ export const FloatingTabBar = () => {
 
   const openSearch = () => {
     tick();
-    switchTab(searchTab.name, {});
+    lensPosition.set(0);
+    edgesReady.set(false);
+    morphSearch(true);
+    requestAnimationFrame(() => switchTab(searchTab.name, {}));
   };
 
   const leaveSearch = () => {
     tick();
-    switchTab(tabs[backIndex].name, {});
+    lensPosition.set(backIndex);
+    settledIndex.set(backIndex);
+    edgesReady.set(false);
+    morphSearch(false);
+    requestAnimationFrame(() => switchTab(tabs[backIndex].name, {}));
   };
 
   const closeSearch = () => {
+    searchPress.press.set(1);
+    searchPress.press.set(withSpring(0, motion.springs.closeFlash));
     setQuery('');
     Keyboard.dismiss();
     leaveSearch();
@@ -663,13 +717,36 @@ export const FloatingTabBar = () => {
 
   const searchScale = useDerivedValue(
     () =>
-      scaleY.get() * lerp(1, modeShrink, clamp01(searchMode.get())) * (1 + searchPress.press.get() * motion.pressGrow),
+      scaleY.get() *
+      lerp(1, modeShrink, Math.pow(clamp01(searchMode.get()), motion.searchMorph.heightLag)) *
+      (1 + searchPress.press.get() * motion.pressGrow),
   );
-  const searchFillStyle = useAnimatedStyle(() => ({
-    opacity:
-      searchPress.press.get() *
-      (searchMode.get() < 0.5 ? 1 - clamp01(searchMode.get() * 4) : clamp01((searchPop.get() - 0.75) * 4)),
-  }));
+  const searchFillStyle = useAnimatedStyle(() => {
+    const mode = searchMode.get();
+    const travel = barWidth.get() + layout.tabBarGap + fullHeight / 2 - fieldGlyphCenter;
+    if (modeTarget.get() === 0) {
+      return {
+        opacity:
+          searchPress.press.get() *
+          (mode < motion.backTravel.handoff
+            ? 1
+            : clamp01((mode - motion.searchClose.fadeFrom) / (1 - motion.searchClose.fadeFrom))),
+        transform: [
+          {
+            translateX:
+              (-motion.searchPop.shift * (1 - clamp01(searchPop.get())) * clamp01(mode)) /
+              Math.max(searchScale.get(), 0.01),
+          },
+        ],
+      };
+    }
+    return {
+      opacity:
+        searchPress.press.get() *
+        (mode < 0.5 ? 1 - clamp01(mode * motion.searchTabs.pressFade) : clamp01((searchPop.get() - 0.75) * 4)),
+      transform: [{ translateX: mode < 0.5 ? -travel * clamp01(mode) : 0 }],
+    };
+  });
   const searchInkStyle = useAnimatedStyle(() => ({
     opacity: 1 - searchPress.press.get() * iconDim,
   }));
@@ -683,10 +760,54 @@ export const FloatingTabBar = () => {
   }));
 
   const pillModeStyle = useAnimatedStyle(() => ({
-    opacity: 1 - clamp01(searchMode.get() * 2.5),
+    opacity:
+      1 - clamp01(searchMode.get() * (modeTarget.get() === 1 ? motion.searchTabs.fade : motion.searchTabs.closeFade)),
+  }));
+  const searchCenter = useDerivedValue(() => barWidth.get() + layout.tabBarGap + fullHeight / 2);
+  const pillReach = useDerivedValue(() =>
+    modeTarget.get() === 1 ? lerp(barWidth.get(), modeInset + modeHeight, clamp01(searchMode.get())) : barWidth.get(),
+  );
+  const rowFit = useDerivedValue(() => {
+    if (modeTarget.get() === 1) {
+      return { scale: 1, x: 0, y: 0 };
+    }
+    const settled = clamp01(searchMode.get());
+    const width = Math.max(barWidth.get(), 1);
+    return {
+      scale: lerp(width, modeHeight, settled) / width,
+      x: modeInset * settled,
+      y: modeInset * Math.pow(settled, motion.searchMorph.heightLag),
+    };
+  });
+  const rowClipStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pillReach.get() - barWidth.get() }],
+  }));
+  const rowUnclipStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: barWidth.get() - pillReach.get() }],
+  }));
+  const rowFitStyle = useAnimatedStyle(() => {
+    const fit = rowFit.get();
+    const width = Math.max(barWidth.get(), 1);
+    return {
+      transform: [
+        { translateX: fit.x - (width * (1 - fit.scale)) / 2 },
+        { translateY: fit.y - (fullHeight * (1 - fit.scale)) / 2 },
+        { scale: fit.scale },
+      ],
+    };
+  });
+  const rowBlurProps = useAnimatedProps(() => ({
+    radius: clamp01(searchMode.get()) * motion.searchTabs.blur,
   }));
   const searchContentStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: searchShiftX.get() }, { translateY: barShiftY.get() }, { scale: searchScale.get() }],
+    transform: [
+      {
+        translateX:
+          searchShiftX.get() + searchBump.get() * (motion.searchBump.pushLeft + motion.searchBump.pushRight) * 0.5,
+      },
+      { translateY: barShiftY.get() },
+      { scale: searchScale.get() },
+    ],
   }));
 
   const barGlassProps = useAnimatedProps(() => {
@@ -704,6 +825,7 @@ export const FloatingTabBar = () => {
     }
     const mode = searchMode.get();
     const settled = clamp01(mode);
+    const settledY = Math.pow(settled, motion.searchMorph.heightLag);
     const pop = searchPop.get();
     const popPlace = clamp01(pop);
     const pad = glass.pad;
@@ -715,9 +837,14 @@ export const FloatingTabBar = () => {
     const pillTop = fullHeight * (1 - scaleY.get()) - grow;
     const backGrow = modeRadius * motion.pressGrow * backPress.press.get() * settled;
     const backLeft = lerp(pillLeft, pillLeft + modeInset, settled) - backGrow;
-    const backRight = lerp(pillRight, pillLeft + modeInset + modeHeight, settled) + backGrow;
-    const backTop = lerp(pillTop, modeInset, settled) - backGrow;
-    const backBottom = lerp(fullHeight + grow, fullHeight - modeInset, settled) + backGrow;
+    const bump = searchBump.get();
+    const backRight =
+      lerp(pillRight, pillLeft + modeInset + modeHeight, settled) +
+      backGrow +
+      bump * motion.searchBump.overshoot -
+      backBump.get() * motion.searchBump.backSquish;
+    const backTop = lerp(pillTop, modeInset, settledY) - backGrow;
+    const backBottom = lerp(fullHeight + grow, fullHeight - modeInset, settledY) + backGrow;
 
     const slide = -width * (1 - scaleX.get()) + centerShiftX.get();
     const searchX = width + layout.tabBarGap + slide + fullHeight / 2 + searchShiftX.get();
@@ -733,8 +860,11 @@ export const FloatingTabBar = () => {
 
     const fieldLeft = lerp(searchX - searchRadius, pillLeft + modeInset + modeHeight + layout.searchModeGap, settled);
     const fieldRight = lerp(fieldEnd, searchX - modeRadius - layout.searchModeGap, popPlace);
-    const fieldTop = lerp(circleY - searchRadius, modeInset, settled);
-    const fieldBottom = lerp(circleY + searchRadius, fullHeight - modeInset, settled);
+    const fieldTop = lerp(circleY - searchRadius, modeInset, settledY);
+    const fieldBottom = lerp(circleY + searchRadius, fullHeight - modeInset, settledY);
+    const tucked =
+      settled > 0 ? Math.min(circleRadius, ((fieldBottom - fieldTop) / 2) * motion.searchPop.tuckScale) : circleRadius;
+    const fieldRadius = lerp(tucked, circleRadius, popPlace);
 
     return {
       blend: Math.max(
@@ -763,25 +893,28 @@ export const FloatingTabBar = () => {
         backTop + pad,
         backRight + pad,
         backBottom + pad,
-        circleX - circleRadius + pad,
-        circleY - circleRadius + pad,
-        circleX + circleRadius + pad,
-        circleY + circleRadius + pad,
+        circleX - fieldRadius + bump * motion.searchBump.pushLeft + pad,
+        circleY - fieldRadius - bump * motion.searchBump.swell + pad,
+        circleX + fieldRadius + bump * motion.searchBump.pushRight + pad,
+        circleY + fieldRadius + bump * motion.searchBump.swell + pad,
         ...(mode > 0 ? [fieldLeft + pad, fieldTop + pad, fieldRight + pad, fieldBottom + pad] : []),
       ],
     };
   });
   const searchGlyphStyle = useAnimatedStyle(() => ({
-    opacity: 1 - clamp01(searchMode.get() * 2),
+    opacity: searchMode.get() > motion.backTravel.handoff ? 0 : 1,
   }));
   const closeGlyphStyle = useAnimatedStyle(() => {
     const settled = clamp01(searchMode.get());
     const pop = clamp01(searchPop.get());
     return {
-      opacity: clamp01(searchMode.get() * 2 - 1),
+      opacity:
+        modeTarget.get() === 1
+          ? clamp01(searchMode.get() * 2 - 1)
+          : clamp01((searchMode.get() - motion.searchClose.fadeFrom) / (1 - motion.searchClose.fadeFrom)),
       transform: [
         { translateX: (-motion.searchPop.shift * (1 - pop) * settled) / Math.max(searchScale.get(), 0.01) },
-        { scale: lerp(motion.searchPop.glyphScale, 1, pop) },
+        { scale: lerp(motion.searchPop.glyphScale / (1 + searchPress.press.get() * motion.pressGrow), 1, pop) },
       ],
     };
   });
@@ -903,25 +1036,32 @@ export const FloatingTabBar = () => {
         </Animated.View>
       </NativeGlassBackdrop>
       <Animated.View pointerEvents="none" style={[styles.lensOverlay, pillModeStyle, pressScaleStyle]}>
-        <View style={styles.row} accessibilityRole="tablist">
-          {tabs.map((tab, index) => (
-            <TabItem
-              key={tab.name}
-              tab={tab}
-              index={index}
-              selected={index === focusedIndex}
-              lensPosition={lensPosition}
-              lift={lift}
-              shine={shine}
-              presence={lensPresence}
-              collapsed={collapsed}
-              itemShift={itemShift}
-              barShiftX={pillShiftX}
-              barShiftY={barShiftY}
-              onActivate={selectTab}
-            />
-          ))}
-        </View>
+        <Animated.View style={[styles.rowClip, rowClipStyle]}>
+          <Animated.View style={[StyleSheet.absoluteFill, rowUnclipStyle]}>
+            <Animated.View style={[StyleSheet.absoluteFill, rowFitStyle]}>
+              <AnimatedNativeGlassBlur style={styles.row} animatedProps={rowBlurProps} accessibilityRole="tablist">
+                {tabs.map((tab, index) => (
+                  <TabItem
+                    key={tab.name}
+                    tab={tab}
+                    index={index}
+                    selected={index === focusedIndex}
+                    lensPosition={lensPosition}
+                    lift={lift}
+                    shine={shine}
+                    presence={lensPresence}
+                    collapsed={collapsed}
+                    itemShift={itemShift}
+                    barShiftX={pillShiftX}
+                    barShiftY={barShiftY}
+                    handoff={index === backIndex ? searchMode : undefined}
+                    onActivate={selectTab}
+                  />
+                ))}
+              </AnimatedNativeGlassBlur>
+            </Animated.View>
+          </Animated.View>
+        </Animated.View>
         <NativeGlassBackdrop
           group={revealGroup}
           offscreen
@@ -981,6 +1121,14 @@ export const FloatingTabBar = () => {
         mode={searchMode}
         backTab={tabs[backIndex]}
         backPress={backPress}
+        travel={{
+          index: backIndex,
+          slotWidth: fullItemWidth,
+          circle: searchCenter,
+          press: searchPress.press,
+          target: modeTarget,
+          fit: rowFit,
+        }}
         onBack={leaveSearch}
       />
     </Animated.View>
@@ -994,6 +1142,11 @@ const styles = StyleSheet.create({
   backdrop: {
     flexDirection: 'row',
     gap: layout.tabBarGap,
+  },
+  rowClip: {
+    ...StyleSheet.absoluteFill,
+    overflow: 'hidden',
+    borderRadius: fullHeight / 2,
   },
   lensOverlay: {
     position: 'absolute',

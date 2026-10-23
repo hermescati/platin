@@ -28,6 +28,12 @@ class GlassModule : Module() {
       Prop("offscreen") { view: GlassBackdropView, value: Boolean? -> view.offscreen = value ?: false }
     }
 
+    View(GlassBlurView::class) {
+      Name("PlatinGlassBlurView")
+
+      Prop("radius") { view: GlassBlurView, value: Float? -> view.radius = value ?: 0f }
+    }
+
     View(GlassView::class) {
       Name("PlatinGlassView")
 
