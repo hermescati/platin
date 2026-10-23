@@ -67,10 +67,17 @@ class GlassModule : Module() {
       Prop("glowStrength") { view: GlassView, value: Float? -> view.glowStrength = value ?: 0f }
       Prop("shadowRadius") { view: GlassView, value: Float? -> view.shadowRadius = value ?: 0f }
       Prop("shadowOffset") { view: GlassView, value: Float? -> view.shadowOffset = value ?: 0f }
+      Prop("shadowSpread") { view: GlassView, value: Float? -> view.shadowSpread = value ?: 0f }
       Prop("pinch") { view: GlassView, value: Float? -> view.pinch = value ?: 0f }
       Prop("pinchWidth") { view: GlassView, value: Float? -> view.pinchWidth = value ?: 0f }
       Prop("pinchSpread") { view: GlassView, value: Float? -> view.pinchSpread = value ?: 0f }
       Prop("rimPrism") { view: GlassView, value: Float? -> view.rimPrism = value ?: 0f }
+      Prop("rimWidth") { view: GlassView, value: Float? -> view.rimWidth = value ?: 2f }
+      Prop("rimOutside") { view: GlassView, value: Boolean? -> view.rimOutside = value ?: false }
+      Prop("rimSide") { view: GlassView, value: Float? -> view.rimSide = value ?: 1f }
+      Prop("insetShade") { view: GlassView, value: Float? -> view.insetShade = value ?: 0f }
+      Prop("insetOffset") { view: GlassView, value: Float? -> view.insetOffset = value ?: 0f }
+      Prop("insetBlur") { view: GlassView, value: Float? -> view.insetBlur = value ?: 0f }
       Prop("pinchLeft") { view: GlassView, value: Float? -> view.pinchLeft = value ?: 0f }
       Prop("pinchRight") { view: GlassView, value: Float? -> view.pinchRight = value ?: 0f }
       Prop("sampleMaxX") { view: GlassView, value: Float? -> view.sampleMaxX = value ?: 0f }

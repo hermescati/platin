@@ -13,7 +13,7 @@ interface Props {
   name: IconName;
   size?: number;
   variant?: 'outline' | 'fill';
-  weight?: 'regular' | 'bold';
+  weight?: 'light' | 'regular' | 'bold';
   tone?: Tone;
   color?: string;
   label?: string;

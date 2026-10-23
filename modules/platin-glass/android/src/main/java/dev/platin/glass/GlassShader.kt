@@ -31,10 +31,17 @@ uniform float glowSpread;
 uniform float glowStrength;
 uniform float shadowRadius;
 uniform float shadowOffset;
+uniform float shadowSpread;
 uniform float pinch;
 uniform float pinchWidth;
 uniform float pinchSpread;
 uniform float rimPrism;
+uniform float rimWidth;
+uniform float rimOutside;
+uniform float rimSide;
+uniform float insetShade;
+uniform float insetOffset;
+uniform float insetBlur;
 uniform float pinchLeft;
 uniform float pinchRight;
 uniform float sampleMaxX;
@@ -111,10 +118,21 @@ half4 main(float2 coord) {
   float4 outer = float4(0.0);
   float4 shadowColor = float4(shadow);
   if (shadowColor.a > 0.0) {
-    float ds = max(field(coord - float2(0.0, shadowOffset)), 0.0);
+    float ds = max(field(coord - float2(0.0, shadowOffset)) - shadowSpread, 0.0);
     float decay = exp(-ds / max(shadowRadius, 1.0));
     float alpha = shadowColor.a * decay * decay * (1.0 - cover);
     outer = float4(shadowColor.rgb * alpha, alpha);
+  }
+  float4 rimColor = float4(rim);
+  float rimHalf = max(rimWidth, 0.5) * 0.5;
+  if (rimOutside > 0.0 && rimColor.a > 0.0 && d > -rimHalf && d < rimHalf * 3.0) {
+    float2 g = float2(field(coord + float2(1.0, 0.0)) - field(coord - float2(1.0, 0.0)),
+                      field(coord + float2(0.0, 1.0)) - field(coord - float2(0.0, 1.0)));
+    float gl = length(g);
+    float side = gl > 0.0001 ? g.x * g.x / (gl * gl) : 0.0;
+    float stroke = clamp(1.0 - abs(d - rimHalf) / (rimHalf * 2.0), 0.0, 1.0) * (1.0 - cover);
+    float sa = rimColor.a * stroke * mix(1.0, rimSide, side);
+    outer = float4(rimColor.rgb * sa, sa) + outer * (1.0 - sa);
   }
   if (cover <= 0.004) {
     return half4(outer);
@@ -195,9 +213,18 @@ half4 main(float2 coord) {
     col += float3(glowStrength * exp(-0.5 * dot(gd, gd)) * glowMask);
   }
 
+  if (insetShade > 0.0) {
+    float shifted = max(-field(coord - float2(0.0, insetOffset)), 0.0);
+    col -= float3(insetShade * (1.0 - smoothstep(0.0, max(insetBlur, 1.0), shifted)));
+  }
   float facingY = n.y * n.y;
-  float shadeDepth = edgeSharp < 0.0 ? max(depth - 1.5, 0.0) : depth;
-  col += float3((edgeSharp * exp(-shadeDepth / max(sharpWidth, 0.1)) + edgeSoft * exp(-shadeDepth / max(softWidth, 0.1))) * facingY);
+  if (edgeSharp < 0.0) {
+    float shadeDepth = max(depth - 1.5, 0.0);
+    col += float3((edgeSharp * exp(-shadeDepth / max(sharpWidth, 0.1)) + edgeSoft * exp(-depth / max(softWidth, 0.1))) * facingY);
+  } else {
+    float bevel = clamp(1.0 - depth / max(sharpWidth, 0.1), 0.0, 1.0);
+    col += float3((edgeSharp * bevel + edgeSoft * exp(-depth / max(softWidth, 0.1))) * facingY * facingY);
+  }
   col = clamp(col, float3(0.0), float3(1.0));
 
   float facing = dot(n, -light);
@@ -206,7 +233,7 @@ half4 main(float2 coord) {
   float band = clamp(bezel * 0.3, 2.0, highlightWidth);
   float glowIn = clamp((depth - 1.0) / 2.0, 0.0, 1.0);
   float glow = glowIn * pow(clamp(1.0 - (depth - 3.0) / band, 0.0, 1.0), 1.5) * cover;
-  float hair = clamp(1.0 - abs(d + 1.0) / 2.0, 0.0, 1.0) * cover;
+  float hair = clamp(1.0 - abs(d + rimHalf) / (rimHalf * 2.0), 0.0, 1.0) * cover * (1.0 - step(0.5, rimOutside));
   if (rimPrism > 0.0) {
     float hue = 0.33 + depth * 0.09;
     float3 spectrum = 0.5 + 0.5 * cos(6.2832 * (hue + float3(0.0, 0.33, 0.67)));
@@ -214,7 +241,6 @@ half4 main(float2 coord) {
     float band = exp(-depth / 3.0) * cover * diagonal * diagonal;
     col += (spectrum - 0.5) * band * rimPrism;
   }
-  float4 rimColor = float4(rim);
   col = mix(col, rimColor.rgb, rimColor.a * hair);
   col += float3((hair * 0.7 * (lead + trail) + glow * 0.1 * lead) * specular);
   col = clamp(col, float3(0.0), float3(1.0));

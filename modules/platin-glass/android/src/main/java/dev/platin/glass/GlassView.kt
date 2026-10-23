@@ -53,10 +53,17 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var glowStrength = 0f
   var shadowRadius = 0f
   var shadowOffset = 0f
+  var shadowSpread = 0f
   var pinch = 0f
   var pinchWidth = 0f
   var pinchSpread = 0f
   var rimPrism = 0f
+  var rimWidth = 2f
+  var rimOutside = false
+  var rimSide = 1f
+  var insetShade = 0f
+  var insetOffset = 0f
+  var insetBlur = 0f
   var pinchLeft = 0f
   var pinchRight = 0f
   var sampleMaxX = 0f
@@ -241,10 +248,17 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = if (opaque) 0f else glowStrength
     state[i++] = shadowRadius * density
     state[i++] = shadowOffset * density
+    state[i++] = shadowSpread * density
     state[i++] = if (opaque) 0f else pinch * density
     state[i++] = pinchWidth * density
     state[i++] = if (opaque) 0f else pinchSpread
     state[i++] = if (opaque) 0f else rimPrism
+    state[i++] = rimWidth
+    state[i++] = if (rimOutside) 1f else 0f
+    state[i++] = rimSide
+    state[i++] = if (opaque) 0f else insetShade
+    state[i++] = insetOffset * density
+    state[i++] = insetBlur * density
     state[i++] = if (opaque) 0f else pinchLeft * density
     state[i++] = if (opaque) 0f else pinchRight * density
     state[i++] = sampleMaxX * density
@@ -295,10 +309,17 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setFloatUniform("glowStrength", state[u++])
     glassShader.setFloatUniform("shadowRadius", state[u++])
     glassShader.setFloatUniform("shadowOffset", state[u++])
+    glassShader.setFloatUniform("shadowSpread", state[u++])
     glassShader.setFloatUniform("pinch", state[u++])
     glassShader.setFloatUniform("pinchWidth", state[u++])
     glassShader.setFloatUniform("pinchSpread", state[u++])
     glassShader.setFloatUniform("rimPrism", state[u++])
+    glassShader.setFloatUniform("rimWidth", state[u++])
+    glassShader.setFloatUniform("rimOutside", state[u++])
+    glassShader.setFloatUniform("rimSide", state[u++])
+    glassShader.setFloatUniform("insetShade", state[u++])
+    glassShader.setFloatUniform("insetOffset", state[u++])
+    glassShader.setFloatUniform("insetBlur", state[u++])
     glassShader.setFloatUniform("pinchLeft", state[u++])
     glassShader.setFloatUniform("pinchRight", state[u++])
     glassShader.setFloatUniform("sampleMaxX", state[u++])
@@ -356,6 +377,6 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     const val REFRACTION_RATIO = 0.7f
     const val HIGHLIGHT_RATIO = 0.05f
     const val MIN_BAND = 2f
-    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 46 + 12
+    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 53 + 12
   }
 }

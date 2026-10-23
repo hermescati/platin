@@ -100,7 +100,7 @@ const TabButton = ({ tab, index, selected, onSelect }: TabButtonProps) => {
         accessibilityState={{ selected }}>
         <Animated.View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: color.chrome.pressFill }, pressStyle]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: color.chrome.solidPressFill }, pressStyle]}
         />
         <Icon
           name={tab.icon}

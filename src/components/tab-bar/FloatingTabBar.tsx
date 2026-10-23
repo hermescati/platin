@@ -196,6 +196,7 @@ export const FloatingTabBar = () => {
   const barSpan = Math.min(window.width - layout.tabBarSideInset * 2, layout.tabBarMaxWidth);
   const barLeft = (window.width - barSpan) / 2;
   const { color, scheme } = useTheme();
+  const iconDim = motion.pressIconDim[scheme];
   const collapse = useTabBarCollapse();
   const { getTrigger, switchTab } = useTabTrigger({ name: tabs[0].name });
   const focusedIndex = tabs.findIndex((tab) => getTrigger(tab.name)?.isFocused);
@@ -244,12 +245,14 @@ export const FloatingTabBar = () => {
   const squish = useSharedValue(0);
   const barPress = useSharedValue(0);
   const tapSlide = useSharedValue(0);
-  const slideTrail = useSharedValue(0);
+  const settleOnArrival = useSharedValue(false);
   const sliding = useSharedValue(false);
   const slideFrom = useSharedValue(0);
   const slideTo = useSharedValue(0);
   const slideRight = useSharedValue(true);
   const shine = useDerivedValue(() => lift.get() * (1 - tapSlide.get()));
+  const tapStay = useSharedValue(0);
+  const slideShape = useDerivedValue(() => tapSlide.get() * (1 - tapStay.get()));
   const squishVelocity = useSharedValue(0);
   const wallSide = useSharedValue(0);
   const approachSpeed = useSharedValue(0);
@@ -338,13 +341,14 @@ export const FloatingTabBar = () => {
       dragIndex.set(index);
       moved.set(false);
       const switching = index !== focused.get();
-      tapSlide.set(switching ? 1 : 0);
+      tapStay.set(switching ? 0 : 1);
+      settleOnArrival.set(false);
+      tapSlide.set(1);
+      tapSlide.set(withDelay(motion.tapSlide.holdDelay, withSpring(0, motion.springs.lift)));
+      barPress.set(withDelay(motion.tapSlide.holdDelay, withSpring(1, motion.springs.barPressIn)));
       lensPresence.set(withSpring(1, motion.springs.lift));
       pressSquash.set(withSequence(withSpring(1, motion.springs.track), withSpring(0, motion.springs.edgeSettle)));
       lift.set(withSpring(1, motion.springs.lift));
-      if (!switching) {
-        barPress.set(withSpring(1, motion.springs.barPressIn));
-      }
       if (switching) {
         const extra = Math.max(0, Math.abs(index - focused.get()) - 1);
         const reach = lastIndex > 1 ? extra / (lastIndex - 1) : 1;
@@ -356,7 +360,6 @@ export const FloatingTabBar = () => {
           duration: motion.tapSlide.trail + motion.tapSlide.trailPerSlot * extra,
           dampingRatio: 1,
         };
-        slideTrail.set(trail.duration);
         sliding.set(true);
         const width = itemWidth.get();
         const center = barWidth.get() / 2 + pillShiftX.get() + (index - middleIndex) * width;
@@ -387,6 +390,7 @@ export const FloatingTabBar = () => {
       moved.set(true);
       tapSlide.set(withSpring(0, motion.springs.lift));
       sliding.set(false);
+      settleOnArrival.set(false);
       barPress.set(withSpring(1, motion.springs.barPressIn));
       const width = barWidth.get();
       const inner =
@@ -416,20 +420,17 @@ export const FloatingTabBar = () => {
       push.set(withSpring(0, motion.springs.release));
       nudge.set(withSpring(0, motion.springs.edgeSettle));
       const settle = withSpring(0, motion.springs.release);
-      const tapping = tapSlide.get() > 0 && !moved.get();
-      lift.set(
-        moved.get()
-          ? settle
-          : withDelay(tapping ? slideTrail.get() * motion.tapSlide.liftHold : motion.tapHold, settle),
-      );
-      barPress.set(
-        tapSlide.get() > 0 && !moved.get()
-          ? withSpring(0, motion.springs.barPressOut)
-          : withSequence(
-              withSpring(1, motion.springs.barPressIn),
-              withDelay(motion.barPressHold, withSpring(0, motion.springs.barPressOut)),
-            ),
-      );
+      const quick = !moved.get() && tapSlide.get() > 0.5;
+      const tapping = quick && sliding.get();
+      if (quick) {
+        tapSlide.set(withSpring(1, motion.springs.lift));
+      }
+      if (tapping) {
+        settleOnArrival.set(true);
+      } else {
+        lift.set(quick ? withDelay(motion.tapHold, settle) : settle);
+      }
+      barPress.set(withSpring(0, motion.springs.barPressOut));
       if (index >= 0) {
         if (!tapping) {
           lensPosition.set(withSpring(index, motion.springs.lens));
@@ -463,7 +464,7 @@ export const FloatingTabBar = () => {
     const filteredSpeed = lift.get() > 0 ? lerp(previousSpeed, speed, 1 - Math.exp(-dt * motion.jelly.smoothing)) : 0;
     smoothSpeed.set(filteredSpeed);
     const acceleration = (filteredSpeed - previousSpeed) / dt;
-    const free = 1 - tapSlide.get();
+    const free = 1 - slideShape.get();
     const stretchTarget = Math.min(1, filteredSpeed / motion.lensMoveSpeed) * motion.jelly.stretch * lift.get();
     const omega = (2 * Math.PI) / motion.jelly.period;
     const force =
@@ -477,7 +478,7 @@ export const FloatingTabBar = () => {
       position >= lastIndex - motion.jelly.endZone &&
       Math.abs(rightEdge.get() - rightTarget.get()) < motion.squish.contact;
     const endReached = nearLeft || nearRight;
-    if (endReached && !atEnd.get() && lift.get() > 0.5) {
+    if (endReached && !atEnd.get() && (lift.get() > 0.5 || sliding.get())) {
       wallSide.set(nearLeft ? -1 : 1);
       squishVelocity.set(
         squishVelocity.get() +
@@ -528,7 +529,19 @@ export const FloatingTabBar = () => {
     }
 
     if (sliding.get()) {
-      if (dragIndex.get() >= 0 || lift.get() > 0.001) {
+      const travel = slideTo.get() - slideFrom.get();
+      const lead = slideRight.get() ? rightEdge.get() : leftEdge.get();
+      const arrived = Math.abs(travel) > 0.5 ? (lead - slideFrom.get()) / travel : 1;
+      if (settleOnArrival.get() && arrived >= motion.tapSlide.arrival) {
+        settleOnArrival.set(false);
+        lift.set(withSpring(0, motion.springs.tapSettle));
+      }
+      const resting =
+        lift.get() < 0.001 &&
+        Math.abs(leftEdge.get() - leftTarget.get()) < motion.edgeEpsilon &&
+        Math.abs(rightEdge.get() - rightTarget.get()) < motion.edgeEpsilon &&
+        Math.abs(position - Math.round(position)) < 0.002;
+      if (tapSlide.get() > 0.5 && !resting) {
         return;
       }
       sliding.set(false);
@@ -569,7 +582,7 @@ export const FloatingTabBar = () => {
     const right = rightEdge.get();
     const span = Math.max(0, right - left);
     const barScale = fullHeight / lensFullHeight;
-    const slide = tapSlide.get();
+    const slide = slideShape.get();
     const liftScale = lerp(
       lerp(
         layout.bubbleRestHeight / lensFullHeight,
@@ -658,7 +671,7 @@ export const FloatingTabBar = () => {
       (searchMode.get() < 0.5 ? 1 - clamp01(searchMode.get() * 4) : clamp01((searchPop.get() - 0.75) * 4)),
   }));
   const searchInkStyle = useAnimatedStyle(() => ({
-    opacity: 1 - searchPress.press.get() * motion.pressIconDim,
+    opacity: 1 - searchPress.press.get() * iconDim,
   }));
 
   const barLiftStyle = useAnimatedStyle(() => ({
@@ -810,7 +823,7 @@ export const FloatingTabBar = () => {
       lerp(motion.endMelt, 1, push.get()),
     );
     const sampleMaxX = (gapMiddle - lensCenter) / Math.max(geometry.scaleX, 0.01) + restWidth / 2 + glass.lensPad;
-    const slide = tapSlide.get();
+    const slide = slideShape.get();
     const canal = slide * lift.get();
     const optics = lerp(1, clamp01(lift.get() * motion.tapSlide.glassRamp), slide);
     const pinchScale = lerp(1, motion.tapSlide.pinch, slide);
@@ -882,7 +895,7 @@ export const FloatingTabBar = () => {
                   <Icon name={searchTab.icon} size={layout.searchIconSize} label={searchTab.label} />
                 </Animated.View>
                 <Animated.View style={[styles.searchIcon, closeGlyphStyle]}>
-                  <Icon name="close" size={layout.closeIconSize} />
+                  <Icon name="close" size={layout.closeIconSize} weight="light" />
                 </Animated.View>
               </Animated.View>
             </Animated.View>

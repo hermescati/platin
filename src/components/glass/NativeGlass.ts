@@ -35,10 +35,17 @@ export interface NativeGlassViewProps extends ViewProps {
   glowStrength?: number;
   shadowRadius?: number;
   shadowOffset?: number;
+  shadowSpread?: number;
   pinch?: number;
   pinchWidth?: number;
   pinchSpread?: number;
   rimPrism?: number;
+  rimWidth?: number;
+  rimOutside?: boolean;
+  rimSide?: number;
+  insetShade?: number;
+  insetOffset?: number;
+  insetBlur?: number;
   pinchLeft?: number;
   pinchRight?: number;
   sampleMaxX?: number;

@@ -27,7 +27,8 @@ interface Props {
 }
 
 export const SearchMode = ({ active, mode, backTab, backPress, onBack }: Props) => {
-  const { color } = useTheme();
+  const { color, scheme } = useTheme();
+  const iconDim = motion.pressIconDim[scheme];
   const { query, setQuery } = useSearchQuery();
   const input = useRef<ComponentRef<typeof TextInput>>(null);
 
@@ -45,7 +46,7 @@ export const SearchMode = ({ active, mode, backTab, backPress, onBack }: Props) 
     transform: [{ scale: 1 + backPress.press.get() * motion.pressGrow }],
   }));
   const backFillStyle = useAnimatedStyle(() => ({ opacity: backPress.press.get() }));
-  const backInkStyle = useAnimatedStyle(() => ({ opacity: 1 - backPress.press.get() * motion.pressIconDim }));
+  const backInkStyle = useAnimatedStyle(() => ({ opacity: 1 - backPress.press.get() * iconDim }));
   const contentStyle = useAnimatedStyle(() => ({ opacity: clamp01(mode.get() * 2 - 1) }));
 
   const goBack = () => {
