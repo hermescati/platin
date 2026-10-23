@@ -241,7 +241,7 @@ half4 main(float2 coord) {
     float band = exp(-depth / 3.0) * cover * diagonal * diagonal;
     col += (spectrum - 0.5) * band * rimPrism;
   }
-  col = mix(col, rimColor.rgb, rimColor.a * hair);
+  col = mix(col, rimColor.rgb, rimColor.a * hair * mix(1.0, rimSide, n.x * n.x));
   col += float3((hair * 0.7 * (lead + trail) + glow * 0.1 * lead) * specular);
   col = clamp(col, float3(0.0), float3(1.0));
   return half4(float4(col * cover, cover) + outer);

@@ -187,6 +187,9 @@ export interface Palette {
     pressLift: string;
     lensTint: string;
     tabAccent: string;
+    lensRimEarly: string;
+    lensTintEarly: string;
+    lensShadow: string;
     legibilityShadow: string;
   };
 }
@@ -249,6 +252,9 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       pressLift: 'rgba(255, 255, 255, 0.038)',
       lensTint: 'rgba(255, 255, 255, 0.035)',
       tabAccent: '#F8A154',
+      lensRimEarly: 'rgba(255, 255, 255, 0.16)',
+      lensTintEarly: 'rgba(255, 255, 255, 0)',
+      lensShadow: 'rgba(0, 0, 0, 0)',
       lensGlow:
         'inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.6), inset -1.5px -1.5px 0 rgba(255, 255, 255, 0.22), inset 0 0 12px rgba(255, 255, 255, 0.08)',
       legibilityShadow: 'rgba(0, 0, 0, 0.55)',
@@ -305,12 +311,15 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lens: 'rgba(0, 0, 0, 0.07)',
       lensActive: 'rgba(255, 255, 255, 0.28)',
       lensInnerShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.7)',
-      lensRim: 'rgba(0, 0, 0, 0.1)',
+      lensRim: 'rgba(0, 0, 0, 0.13)',
       barRim: 'rgba(0, 0, 0, 0.1)',
       pressFill: 'rgba(255, 255, 255, 1)',
       pressLift: 'rgba(255, 255, 255, 0.25)',
-      lensTint: 'rgba(255, 255, 255, 0.15)',
+      lensTint: 'rgba(255, 255, 255, 0.02)',
       tabAccent: a[700],
+      lensRimEarly: 'rgba(0, 0, 0, 0.06)',
+      lensTintEarly: 'rgba(255, 255, 255, 0)',
+      lensShadow: 'rgba(0, 0, 0, 0.05)',
       lensGlow:
         'inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 12px rgba(255, 255, 255, 0.35)',
       legibilityShadow: 'rgba(255, 255, 255, 0.6)',
@@ -444,14 +453,18 @@ export const glass = {
   lensPinch: 18,
   lensPinchWidth: 11,
   lensPinchSpread: 0.26,
-  lensRimPrism: 0.5,
+  lensRimPrism: { dark: 0.5, light: 0.15 },
+  lensShadowRadius: 8,
+  lensShadowOffset: 4,
   lensPinchSideReach: 0.25,
   lensPad: 12,
   lensFalloff: 0,
   lensDispersion: 0.95,
   lensMagnify: 0.2,
   lensSpecular: 0.22,
-  lensEdgeShade: { dark: -0.45, light: -0.1 },
+  lensEdgeShade: { dark: -0.45, light: -0.04 },
+  lensRimSide: { dark: 1, light: 3 },
+  lensRimWidth: { dark: 2, light: 1 },
   lensShadeWidth: 1,
   liftBlend: 0,
   meltBlend: 12,
@@ -471,6 +484,9 @@ export const motion = {
     celebrate: { duration: 600, dampingRatio: 0.6 },
     lens: { duration: 380, dampingRatio: 1 },
     lift: { duration: 220, dampingRatio: 1 },
+    tapLift: { duration: 330, dampingRatio: 1 },
+    tapDip: { duration: 120, dampingRatio: 0.5, overshootClamping: true },
+    tapRise: { duration: 180, dampingRatio: 1, energyThreshold: 2e-3 },
     release: { duration: 360, dampingRatio: 1 },
     tapSettle: { duration: 260, dampingRatio: 1 },
     edgeLead: { duration: 200, dampingRatio: 1 },
@@ -539,7 +555,7 @@ export const motion = {
   },
   barGrow: { x: 6, y: 2.5, towardSearch: 1 },
   lensEdgeReach: 3,
-  tapHold: 100,
+  tapLens: { ellipse: 0.35, revealOverhang: 5.5, dip: 0.3, dipFrom: 0.5, liftY: 1.31 },
   pressGrow: 0.26,
   pressIconDim: { dark: 0.4, light: 0.9 },
   backTravel: { handoff: 0.001, settle: 0.995, textRate: 2, textDelay: 0.6 },
