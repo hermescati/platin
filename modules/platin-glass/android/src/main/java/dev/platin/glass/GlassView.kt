@@ -88,6 +88,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var fallback: Color = TRANSPARENT
   var shadow: Color = TRANSPARENT
   var plain = false
+  var alphaPass = false
 
   private val density = resources.displayMetrics.density
   private val selfToGlobal = Matrix()
@@ -365,6 +366,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setColorUniform("tint", if (opaque) fallback else tint)
     glassShader.setColorUniform("rim", rim)
     glassShader.setColorUniform("shadow", shadow)
+    glassShader.setFloatUniform("alphaPass", if (alphaPass) 1f else 0f)
 
     val glass = RenderEffect.createRuntimeShaderEffect(glassShader, "content")
     val inner = blur(blurPx)

@@ -91,6 +91,7 @@ class GlassModule : Module() {
       Prop("fallback") { view: GlassView, value: Color? -> view.fallback = value ?: TRANSPARENT }
       Prop("shadow") { view: GlassView, value: Color? -> view.shadow = value ?: TRANSPARENT }
       Prop("plain") { view: GlassView, value: Boolean? -> view.plain = value ?: false }
+      Prop("alphaPass") { view: GlassView, value: Boolean? -> view.alphaPass = value ?: false }
 
       OnViewDidUpdateProps { view: GlassView ->
         view.updateEffect()

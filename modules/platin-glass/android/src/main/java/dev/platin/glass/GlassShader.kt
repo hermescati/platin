@@ -50,6 +50,7 @@ uniform float4 clipRect;
 uniform float2 clipScale;
 uniform float clipSoft;
 uniform float clipOn;
+uniform float alphaPass;
 layout(color) uniform half4 tint;
 layout(color) uniform half4 rim;
 layout(color) uniform half4 shadow;
@@ -169,24 +170,61 @@ half4 main(float2 coord) {
   float2 lo = float2(0.5);
   float2 hi = float2(sampleMaxX > 0.0 ? min(size.x, sampleMaxX) : size.x, size.y) - float2(0.5);
   float3 col;
-  float3 centre = content.eval(clamp(base + offset, lo, hi)).rgb;
+  float4 centreSample = content.eval(clamp(base + offset, lo, hi));
+  float3 centre = centreSample.rgb;
+  float alpha = centreSample.a;
   float spread = dispersion * slope * smoothstep(0.02, 0.12, luma(centre));
   float pinchSplit = length(pinchVec) * pinchSpread;
   if (spread > 0.01 || pinchSplit > 0.05) {
     float3 sum = float3(0.0);
     float3 weight = float3(0.0);
+    float alphaSum = 0.0;
+    float alphaWeight = 0.0;
     for (int i = 0; i < 8; i++) {
       float s = (float(i) + 0.5) / 8.0;
       float3 w = float3(1.0 - s, 1.0 - abs(2.0 * s - 1.0), s);
       w = w * w;
       float k = 2.0 * s - 1.0;
       float2 uv = clamp(base + offset * (1.0 - spread * k) - pinchVec * (pinchSpread * k), lo, hi);
-      sum += content.eval(uv).rgb * w;
+      float4 sampled = content.eval(uv);
+      sum += sampled.rgb * w;
       weight += w;
+      alphaSum += sampled.a * (w.x + w.y + w.z);
+      alphaWeight += w.x + w.y + w.z;
     }
     col = sum / weight;
+    alpha = alphaSum / alphaWeight;
   } else {
     col = centre;
+  }
+
+  if (alphaPass > 0.5) {
+    float4 lit = float4(col, alpha);
+    if (rimPrism > 0.0) {
+      float2 across = float2(-n.y, n.x);
+      float reach = slope * refraction;
+      float4 fringe = float4(0.0);
+      float lastWarm = 0.0;
+      float lastCool = 0.0;
+      for (int i = 1; i <= 3; i++) {
+        float d = reach * 0.5 * float(i);
+        float ahead = content.eval(clamp(base + offset + across * d, lo, hi)).a;
+        float behind = content.eval(clamp(base + offset - across * d, lo, hi)).a;
+        float edge = (ahead - behind) * slope * rimPrism;
+        float warm = clamp(edge, 0.0, 1.0);
+        float cool = clamp(-edge, 0.0, 1.0);
+        float bandWarm = max(warm - lastWarm, 0.0);
+        float bandCool = max(cool - lastCool, 0.0);
+        lastWarm = max(lastWarm, warm);
+        lastCool = max(lastCool, cool);
+        float3 warmColor = i == 1 ? float3(1.0, 0.86, 0.25) : (i == 2 ? float3(0.45, 0.95, 0.45) : float3(0.35, 0.6, 1.0));
+        float3 coolColor = i == 1 ? float3(1.0, 0.55, 0.2) : (i == 2 ? float3(1.0, 0.25, 0.35) : float3(0.7, 0.35, 1.0));
+        fringe += float4(warmColor * bandWarm + coolColor * bandCool, bandWarm + bandCool);
+      }
+      fringe = fringe / max(1.0, fringe.a);
+      lit += fringe * (1.0 - lit.a);
+    }
+    return half4(lit * cover);
   }
 
   float lum = luma(col);

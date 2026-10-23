@@ -260,6 +260,7 @@ export const FloatingTabBar = () => {
   const slideTo = useSharedValue(0);
   const slideRight = useSharedValue(true);
   const tapStay = useSharedValue(0);
+  const landing = useSharedValue(0);
   const tapDipping = useSharedValue(false);
   const shine = useDerivedValue(() => lift.get() * (1 - tapSlide.get() * (1 - tapStay.get())));
   const held = useDerivedValue(() => lerp(1, barPress.get(), tapStay.get()));
@@ -400,6 +401,7 @@ export const FloatingTabBar = () => {
       settleOnArrival.set(false);
       tapSlide.set(1);
       tapSlide.set(withDelay(motion.tapSlide.holdDelay, withSpring(0, motion.springs.lift)));
+      landing.set(switching ? withSpring(0, motion.springs.lift) : withSpring(1, motion.springs.landIn));
       barPress.set(withSpring(1, motion.springs.barPressIn));
       lensPresence.set(withSpring(1, motion.springs.lift));
       pressSquash.set(withSequence(withSpring(1, motion.springs.track), withSpring(0, motion.springs.edgeSettle)));
@@ -492,11 +494,17 @@ export const FloatingTabBar = () => {
       } else {
         const rise = withSpring(1, motion.springs.tapRise);
         const dipping = tapDipping.get() && lift.get() > motion.tapLens.dipFrom;
+        const firm = quick && !dipping && barPress.get() > motion.tapLens.firmPress;
+        landing.set(
+          firm
+            ? withSequence(withSpring(1, motion.springs.landIn), withSpring(0, motion.springs.landOut))
+            : withSpring(0, motion.springs.landOut),
+        );
         lift.set(
           quick
             ? dipping
               ? withSequence(withSpring(motion.tapLens.dip, motion.springs.tapDip), rise, settle)
-              : withSequence(rise, settle)
+              : withSequence(rise, firm ? withSpring(0, motion.springs.landFall) : settle)
             : settle,
         );
         tapDipping.set(false);
@@ -583,7 +591,11 @@ export const FloatingTabBar = () => {
       reach +
       push.get() * motion.lensPushTravel;
     const restHalf = Math.min(layout.bubbleRestWidth, width + space[6]) / 2;
-    const halfWidth = lerp(restHalf, (width / 2) * motion.lensLift.x, lift.get() * free);
+    const spread = Math.max(
+      lift.get(),
+      Math.min(1, landing.get() * tapStay.get() * tapSlide.get() * motion.tapLanding.hold),
+    );
+    const halfWidth = lerp(restHalf, (width / 2) * motion.lensLift.x, spread * free);
     const left = center - halfWidth;
     const right = center + halfWidth;
     restSpan.set(halfWidth * 2);
@@ -667,7 +679,7 @@ export const FloatingTabBar = () => {
       lerp(
         layout.bubbleRestHeight / lensFullHeight,
         lerp(
-          lerp(motion.lensLift.y, motion.tapLens.liftY, 1 - held.get()),
+          lerp(motion.lensLift.y, motion.tapLens.liftY, tapStay.get() * tapSlide.get()),
           (fullHeight + motion.tapSlide.extraHeight) / lensFullHeight,
           slide,
         ),
@@ -706,6 +718,9 @@ export const FloatingTabBar = () => {
         lerp(motion.canal.spread, motion.tapSlide.wallSpread, slide) *
         (lensFullHeight / fullWidth);
     }
+    const land = landing.get() * tapStay.get() * tapSlide.get();
+    scaleX *= 1 + land * motion.tapLanding.wide;
+    scaleY *= 1 - land * motion.tapLanding.flat;
     return {
       translateX:
         (left + right) / 2 -
@@ -713,18 +728,42 @@ export const FloatingTabBar = () => {
         fullWidth / 2 +
         heading.get() * Math.abs(jelly.get()) * (span / 2) * motion.jelly.lean +
         wallSide.get() * squish.get() * (span / 2),
-      translateY: barShiftY.get() + slide * lift.get() * motion.tapSlide.drop,
+      translateY:
+        barShiftY.get() + slide * lift.get() * motion.tapSlide.drop + land * (1 - lift.get()) * motion.tapLanding.drop,
       scaleX,
       scaleY,
     };
   });
 
-  const lensOut = useDerivedValue(() => {
+  const lensRise = useDerivedValue(() => {
     const overhang = (lensGeometry.get().scaleY * lensFullHeight - fullHeight) / 2;
     const out = clamp01(overhang / motion.tapLens.revealOverhang);
     return lerp(out * out * (3 - 2 * out), 1, held.get());
   });
-  const grey = useDerivedValue(() => lerp(1 - shine.get(), 1 - lensOut.get(), tapStay.get()));
+  const lensPeak = useSharedValue(0);
+  useAnimatedReaction(
+    () =>
+      lift.get() < motion.tapLens.fallGrey.from && landing.get() < motion.tapLens.fallGrey.from
+        ? 0
+        : Math.max(lensPeak.get(), lensRise.get()),
+    (peak) => {
+      if (peak !== lensPeak.get()) {
+        lensPeak.set(peak);
+      }
+    },
+  );
+  const lensOut = useDerivedValue(() => {
+    const { from, to } = motion.tapLens.fallGrey;
+    const fall = clamp01((lift.get() - from) / (to - from));
+    const land = landing.get() * tapStay.get() * tapSlide.get();
+    return Math.max(lensRise.get(), Math.min(lensPeak.get(), Math.max(fall * fall * (3 - 2 * fall), land)));
+  });
+  const grey = useDerivedValue(() =>
+    Math.max(
+      lerp(1 - shine.get(), 1 - lensOut.get(), tapStay.get()),
+      landing.get() * tapStay.get() * tapSlide.get() * motion.tapLanding.tint,
+    ),
+  );
 
   const lensStyle = useAnimatedStyle(() => {
     const geometry = lensGeometry.get();
@@ -739,10 +778,37 @@ export const FloatingTabBar = () => {
     };
   });
 
+  const lensGlassOpacity = useDerivedValue(() =>
+    edgesReady.get()
+      ? Math.max(
+          lerp(lift.get(), clamp01(lift.get() * motion.tapSlide.glassRamp), tapSlide.get()),
+          clamp01(landing.get() * tapStay.get() * tapSlide.get() * motion.tapLanding.glassHold),
+        )
+      : 0,
+  );
+
   const lensGlassStyle = useAnimatedStyle(() => {
     const geometry = lensGeometry.get();
     return {
-      opacity: edgesReady.get() ? lerp(lift.get(), clamp01(lift.get() * motion.tapSlide.glassRamp), tapSlide.get()) : 0,
+      opacity: lensGlassOpacity.get(),
+      transform: [
+        { translateX: geometry.translateX },
+        { translateY: geometry.translateY },
+        { scaleX: geometry.scaleX },
+        { scaleY: geometry.scaleY },
+      ],
+    };
+  });
+
+  const lensIconStyle = useAnimatedStyle(() => {
+    const geometry = lensGeometry.get();
+    return {
+      opacity: Math.max(
+        lensGlassOpacity.get(),
+        clamp01(
+          landing.get() * tapStay.get() * tapSlide.get() * motion.tapLanding.glassHold * motion.tapLanding.iconHold,
+        ),
+      ),
       transform: [
         { translateX: geometry.translateX },
         { translateY: geometry.translateY },
@@ -983,6 +1049,40 @@ export const FloatingTabBar = () => {
     };
   });
 
+  const lensOptics = useDerivedValue(() => {
+    const geometry = lensGeometry.get();
+    const slide = slideShape.get();
+    const canal = slide * lift.get();
+    const optics = lerp(1, clamp01(lift.get() * motion.tapSlide.glassRamp), slide);
+    const bendScale = optics * lerp(1, motion.tapSlide.bend, slide);
+    const centerX = inlinePad + layout.bubbleRestWidth / 2 + geometry.translateX;
+    const centerY = fullHeight / 2 + geometry.translateY - barShiftY.get();
+    const reveal = lensOut.get();
+    return {
+      refraction: glass.lensRefraction * bendScale * reveal,
+      magnify: glass.lensMagnify * optics * reveal,
+      dispersion: glass.lensDispersion * bendScale * reveal,
+      ellipse: Math.max(canal, motion.tapLens.ellipse * lift.get() * (1 - held.get())),
+      clipLeft: -motion.canal.overflow - centerX,
+      clipTop: -motion.canal.overflow - centerY,
+      clipRight: barWidth.get() + motion.canal.overflow - centerX,
+      clipBottom: fullHeight + motion.canal.overflow - centerY,
+      clipScaleX: Math.max(geometry.scaleX, 0.01),
+      clipScaleY: Math.max(geometry.scaleY, 0.01),
+      clipSoft: motion.canal.soft,
+      clipOn: canal,
+    };
+  });
+
+  const lensIconProps = useAnimatedProps(() => {
+    const optics = lensOptics.get();
+    return {
+      ...optics,
+      refraction: optics.refraction * glass.lensIconBend,
+      rimPrism: glass.lensIconPrism * lensOut.get(),
+    };
+  });
+
   const lensSideProps = useAnimatedProps(() => {
     const position = lensPosition.get();
     const geometry = lensGeometry.get();
@@ -994,38 +1094,20 @@ export const FloatingTabBar = () => {
       lerp(motion.endMelt, 1, push.get()),
     );
     const sampleMaxX = (gapMiddle - lensCenter) / Math.max(geometry.scaleX, 0.01) + restWidth / 2 + glass.lensPad;
-    const slide = slideShape.get();
-    const canal = slide * lift.get();
-    const optics = lerp(1, clamp01(lift.get() * motion.tapSlide.glassRamp), slide);
-    const pinchScale = lerp(1, motion.tapSlide.pinch, slide);
-    const bendScale = optics * lerp(1, motion.tapSlide.bend, slide);
-    const centerX = lensCenter;
-    const centerY = fullHeight / 2 + geometry.translateY - barShiftY.get();
-    const press = held.get();
+    const pinchScale = lerp(1, motion.tapSlide.pinch, slideShape.get());
     const reveal = lensOut.get();
     return {
+      ...lensOptics.get(),
       sampleMaxX: Math.max(sampleMaxX, 1),
       pinch: glass.lensPinch * (1 - deflate.get()) * pinchScale * reveal,
       pinchLeft: glass.lensPinch * clamp01(1 - position / glass.lensPinchSideReach) * pinchScale * reveal,
       pinchRight:
         glass.lensPinch * clamp01(1 - (lastIndex - position) / glass.lensPinchSideReach) * pinchScale * reveal,
-      refraction: glass.lensRefraction * bendScale * reveal,
       specular: glass.lensSpecular * reveal,
       rim: interpolateColor(reveal, [0, 1], [color.chrome.lensRimEarly, color.chrome.lensRim]),
-      magnify: glass.lensMagnify * optics * reveal,
-      dispersion: glass.lensDispersion * bendScale * reveal,
       rimPrism: glass.lensRimPrism[scheme] * reveal,
       shadow: interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensShadow]),
       tint: interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensTint]),
-      ellipse: Math.max(canal, motion.tapLens.ellipse * lift.get() * (1 - press)),
-      clipLeft: -motion.canal.overflow - centerX,
-      clipTop: -motion.canal.overflow - centerY,
-      clipRight: barWidth.get() + motion.canal.overflow - centerX,
-      clipBottom: fullHeight + motion.canal.overflow - centerY,
-      clipScaleX: Math.max(geometry.scaleX, 0.01),
-      clipScaleY: Math.max(geometry.scaleY, 0.01),
-      clipSoft: motion.canal.soft,
-      clipOn: canal,
     };
   });
 
@@ -1140,7 +1222,6 @@ export const FloatingTabBar = () => {
             animatedProps={lensSideProps}
             group={tabBarGroup}
             underlay={screenGroup}
-            overlay={revealGroup}
             inset={glass.lensPad}
             plain={forcePlainGlass}
             refractionYScale={glass.lensRefractionYScale}
@@ -1160,6 +1241,24 @@ export const FloatingTabBar = () => {
             rimWidth={glass.lensRimWidth[scheme]}
             shadowRadius={glass.lensShadowRadius}
             shadowOffset={glass.lensShadowOffset}
+          />
+        </Animated.View>
+        <Animated.View style={[styles.lens, lensIconStyle]}>
+          <AnimatedNativeGlassView
+            style={styles.lensGlass}
+            animatedProps={lensIconProps}
+            group={revealGroup}
+            alphaPass
+            inset={glass.lensPad}
+            plain={forcePlainGlass}
+            refractionYScale={glass.lensRefractionYScale}
+            cornerRadius={lensFullHeight / 2}
+            blurRadius={glass.lensBlurRadius}
+            bezel={glass.lensBezel}
+            refraction={glass.lensRefraction}
+            falloff={glass.lensFalloff}
+            dispersion={glass.lensDispersion}
+            magnify={glass.lensMagnify}
           />
         </Animated.View>
       </Animated.View>
