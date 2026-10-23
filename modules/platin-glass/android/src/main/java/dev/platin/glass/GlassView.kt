@@ -3,6 +3,7 @@ package dev.platin.glass
 import android.app.ActivityManager
 import android.content.Context
 import android.database.ContentObserver
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
@@ -10,6 +11,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.RenderEffect
 import android.graphics.RenderNode
@@ -19,10 +21,13 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.PixelCopy
 import android.view.ViewTreeObserver
 import expo.modules.kotlin.AppContext
+import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -36,6 +41,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var cornerRadius = 0f
   var blend = 0f
   var blurRadius = 0f
+  var blurRadiusY = -1f
   var bezel = 0f
   var refraction = 0f
   var refractOutward = false
@@ -78,6 +84,34 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var wallSide = 0f
   var wallRound = 1f
   var wallLead = 1f
+  var topBend = 1f
+  var topDepth = 1f
+  var mirror = 0f
+  var foldTop = 1f
+  var pullBottom = 0f
+  var pullBand = 1f
+  var wideRadius = 0f
+  var wideMix = 0f
+  var frost = 0f
+  var frostClear = 0f
+  var frostRadius = 0f
+  var sampleBackdrop = false
+    set(value) {
+      field = value
+      scheduleSample()
+    }
+  private val onBackdropLuma by EventDispatcher()
+  private var lastLuma = -1f
+  private var sampling = false
+  private val sampleBitmap by lazy { Bitmap.createBitmap(SAMPLE_SIZE, SAMPLE_SIZE, Bitmap.Config.ARGB_8888) }
+  private val samplePixels = IntArray(SAMPLE_SIZE * SAMPLE_SIZE)
+  private val sampleRunnable = Runnable { sampleOnce() }
+  var frostLeft = 0f
+  var frostTop = 0f
+  var frostRight = 0f
+  var frostBottom = 0f
+  var chroma = 1f
+  var lift = 0f
   var clipLeft = 0f
   var clipTop = 0f
   var clipRight = 0f
@@ -154,10 +188,55 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     context.contentResolver.registerContentObserver(Settings.Secure.getUriFor(HIGH_TEXT_CONTRAST), false, contrastObserver)
     reducedTransparency = readReducedTransparency()
     updateEffect()
+    scheduleSample()
+  }
+
+  private fun scheduleSample() {
+    removeCallbacks(sampleRunnable)
+    if (sampleBackdrop && isAttachedToWindow) {
+      postDelayed(sampleRunnable, SAMPLE_INTERVAL_MS)
+    }
+  }
+
+  private fun sampleOnce() {
+    val window = appContext.currentActivity?.window
+    if (window == null || sampling || frost <= 0f || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      scheduleSample()
+      return
+    }
+    val origin = IntArray(2)
+    getLocationInWindow(origin)
+    val edge = SAMPLE_INSET * density
+    val left = (origin[0] + frostLeft * density + edge).roundToInt()
+    val top = (origin[1] + frostTop * density + edge).roundToInt()
+    val bottom = (origin[1] + frostBottom * density - edge).roundToInt()
+    val right = left + (SAMPLE_WIDTH * density).roundToInt()
+    if (bottom - top < 2 || right <= left) {
+      scheduleSample()
+      return
+    }
+    sampling = true
+    PixelCopy.request(window, Rect(left, top, right, bottom), sampleBitmap, { result ->
+      sampling = false
+      if (result == PixelCopy.SUCCESS) {
+        sampleBitmap.getPixels(samplePixels, 0, SAMPLE_SIZE, 0, 0, SAMPLE_SIZE, SAMPLE_SIZE)
+        var sum = 0f
+        for (pixel in samplePixels) {
+          sum += 0.2126f * Color.red(pixel) + 0.7152f * Color.green(pixel) + 0.0722f * Color.blue(pixel)
+        }
+        val luma = sum / samplePixels.size / 255f
+        if (kotlin.math.abs(luma - lastLuma) > SAMPLE_STEP) {
+          lastLuma = luma
+          onBackdropLuma(mapOf("luma" to luma))
+        }
+      }
+      scheduleSample()
+    }, Handler(Looper.getMainLooper()))
   }
 
   override fun onDetachedFromWindow() {
     viewTreeObserver.removeOnPreDrawListener(preDraw)
+    removeCallbacks(sampleRunnable)
     context.contentResolver.unregisterContentObserver(contrastObserver)
     super.onDetachedFromWindow()
   }
@@ -209,8 +288,13 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     return if (side == Float.MAX_VALUE) 0f else side
   }
 
-  private fun blur(radiusPx: Float): RenderEffect? =
-    if (radiusPx > 0f) RenderEffect.createBlurEffect(radiusPx, radiusPx, Shader.TileMode.CLAMP) else null
+  private fun blurY(radiusPx: Float): Float =
+    if (blurRadiusY >= 0f && radiusPx > 0f) blurRadiusY * density else radiusPx
+
+  private fun blur(radiusPx: Float): RenderEffect? {
+    val y = blurY(radiusPx)
+    return if (radiusPx > 0f || y > 0f) RenderEffect.createBlurEffect(max(radiusPx, 0.01f), max(y, 0.01f), Shader.TileMode.CLAMP) else null
+  }
 
   private fun putColor(index: Int, color: Color): Int {
     state[index] = color.red()
@@ -311,6 +395,24 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = clipScaleY
     state[i++] = clipSoft * density
     state[i++] = clipOn
+    state[i++] = topBend
+    state[i++] = topDepth
+    state[i++] = if (opaque) 0f else mirror
+    state[i++] = if (opaque) 1f else chroma
+    state[i++] = blurRadiusY
+    state[i++] = if (opaque) 0f else lift
+    state[i++] = foldTop
+    state[i++] = if (opaque) 0f else pullBottom * density
+    state[i++] = pullBand * density
+    state[i++] = wideRadius * density
+    state[i++] = if (opaque) 0f else wideMix
+    state[i++] = frostLeft * density
+    state[i++] = frostTop * density
+    state[i++] = frostRight * density
+    state[i++] = frostBottom * density
+    state[i++] = if (opaque) 0f else frost
+    state[i++] = frostClear
+    state[i++] = frostRadius * density
     i = putColor(i, if (opaque) fallback else tint)
     i = putColor(i, rim)
     putColor(i, shadow)
@@ -371,7 +473,22 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setFloatUniform("clipScale", state[u], state[u + 1])
     u += 2
     glassShader.setFloatUniform("clipSoft", state[u++])
-    glassShader.setFloatUniform("clipOn", state[u])
+    glassShader.setFloatUniform("clipOn", state[u++])
+    glassShader.setFloatUniform("topBend", state[u++])
+    glassShader.setFloatUniform("topDepth", state[u++])
+    glassShader.setFloatUniform("mirror", state[u++])
+    glassShader.setFloatUniform("chroma", state[u++])
+    u++
+    glassShader.setFloatUniform("lift", state[u++])
+    glassShader.setFloatUniform("edgeY", state[u], state[u + 1], state[u + 2])
+    u += 3
+    glassShader.setFloatUniform("wide", state[u], state[u + 1])
+    u += 2
+    glassShader.setFloatUniform("frostRect", state[u], state[u + 1], state[u + 2], state[u + 3])
+    u += 4
+    glassShader.setFloatUniform("frost", state[u++])
+    glassShader.setFloatUniform("frostClear", state[u++])
+    glassShader.setFloatUniform("frostRadius", state[u])
     glassShader.setColorUniform("tint", if (opaque) fallback else tint)
     glassShader.setColorUniform("rim", rim)
     glassShader.setColorUniform("shadow", shadow)
@@ -572,8 +689,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     const val DEFAULT_HIGHLIGHT_WIDTH = 2f
     const val SHAPE_STEPS = 4f
     const val REFERENCE_SIDE = 110f
-    const val BEZEL_RATIO = 0.3f
-    const val REFRACTION_RATIO = 0.7f
+    const val BEZEL_RATIO = 0.5f
+    const val REFRACTION_RATIO = 1.2f
     const val HIGHLIGHT_RATIO = 0.05f
     const val MIN_BAND = 2f
     const val GLOW_REACH = 2.5f
@@ -582,6 +699,11 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     val EDGE_STOPS = floatArrayOf(0f, 0.3f, 0.7f, 1f)
     const val ADAPTIVE_LIFT = 0.14f
     const val ADAPTIVE_DARKEN = 0.22f
-    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 12
+    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 30
+    const val SAMPLE_SIZE = 8
+    const val SAMPLE_INTERVAL_MS = 150L
+    const val SAMPLE_INSET = 6f
+    const val SAMPLE_WIDTH = 8f
+    const val SAMPLE_STEP = 0.015f
   }
 }

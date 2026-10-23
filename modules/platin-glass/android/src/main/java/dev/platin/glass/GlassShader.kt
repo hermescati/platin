@@ -46,6 +46,17 @@ uniform float pinchLeft;
 uniform float pinchRight;
 uniform float sampleMaxX;
 uniform float ellipse;
+uniform float topBend;
+uniform float topDepth;
+uniform float mirror;
+uniform float3 edgeY;
+uniform float2 wide;
+uniform float4 frostRect;
+uniform float frost;
+uniform float frostClear;
+uniform float frostRadius;
+uniform float chroma;
+uniform float lift;
 uniform float4 clipRect;
 uniform float2 clipScale;
 uniform float clipSoft;
@@ -158,9 +169,11 @@ half4 main(float2 coord) {
   n = len > 0.0001 ? n / len : float2(0.0, -1.0);
 
   float depth = max(-d, 0.0);
-  float t = clamp(depth / max(bezel, 1.0), 0.0, 1.0);
+  float t = clamp(depth / max(bezel * mix(1.0, topDepth, clamp(-n.y, 0.0, 1.0)), 1.0), 0.0, 1.0);
   float slope;
-  if (falloff > 0.001) {
+  if (falloff < -0.001) {
+    slope = sin(3.14159265 * pow(t, -falloff));
+  } else if (falloff > 0.001) {
     float tail = pow(5.0, -falloff);
     slope = (pow(1.0 + 4.0 * t, -falloff) - tail) / (1.0 - tail);
   } else {
@@ -179,7 +192,17 @@ half4 main(float2 coord) {
     pinchVec = mix(vertical, n * pinch, sideAmount) * pinchFade;
   }
   base += pinchVec;
-  float2 offset = n * float2(direction, directionY) * (slope * refraction);
+  float2 offset = n * float2(direction, directionY) * (slope * refraction * mix(1.0, topBend, clamp(-n.y, 0.0, 1.0)));
+  if (mirror > 0.0) {
+    float band = max(bezel, 1.0);
+    float2 fold = n * (2.0 * depth * (1.0 - smoothstep(band * 0.55, band, depth)));
+    fold.y *= n.y < 0.0 ? edgeY.x : 0.0;
+    offset = mix(offset, fold, mirror);
+  }
+  if (edgeY.y > 0.0 && n.y > 0.0) {
+    float reach = 1.0 - clamp(depth / max(edgeY.z, 1.0), 0.0, 1.0);
+    offset.y -= edgeY.y * pow(reach, 1.7) * n.y;
+  }
   float2 lo = float2(0.5);
   float2 hi = float2(sampleMaxX > 0.0 ? min(size.x, sampleMaxX) : size.x, size.y) - float2(0.5);
   float3 col;
@@ -211,27 +234,52 @@ half4 main(float2 coord) {
     col = centre;
   }
 
+  float frosted = frost > 0.0 ? frost * clamp(0.5 - capsule(coord, frostRect), 0.0, 1.0) : 0.0;
+  if ((wide.y > 0.0 || frosted > 0.0) && wide.x > 0.5) {
+    float2 at = base + offset;
+    float3 ring = float3(0.0);
+    for (int i = 0; i < 8; i++) {
+      float ang = float(i) * 0.785398;
+      float2 dir = float2(cos(ang), sin(ang));
+      ring += content.eval(clamp(at + dir * wide.x, lo, hi)).rgb;
+      ring += content.eval(clamp(at + dir.yx * float2(-1.0, 1.0) * wide.x * 0.5, lo, hi)).rgb;
+    }
+    col = mix(col, ring / 16.0, wide.y * (1.0 - frosted));
+  }
+  if (frosted > 0.0 && frostRadius > 0.5) {
+    float2 at = base + offset;
+    float3 disc = float3(0.0);
+    float total = 0.0;
+    for (int i = 0; i < 24; i++) {
+      float f = (float(i) + 0.5) / 24.0;
+      float r = frostRadius * sqrt(f);
+      float ang = float(i) * 2.39996;
+      float w = exp(-2.0 * f);
+      disc += content.eval(clamp(at + float2(cos(ang), sin(ang)) * r, lo, hi)).rgb * w;
+      total += w;
+    }
+    col = mix(col, disc / total, frosted);
+  }
   if (alphaPass > 0.5) {
     float4 lit = float4(col, alpha);
     if (rimPrism > 0.0) {
       float2 across = float2(-n.y, n.x);
-      float reach = slope * refraction;
       float4 fringe = float4(0.0);
       float lastWarm = 0.0;
       float lastCool = 0.0;
-      for (int i = 1; i <= 3; i++) {
-        float d = reach * 0.5 * float(i);
+      for (int i = 1; i <= 2; i++) {
+        float d = 3.0 * float(i);
         float ahead = content.eval(clamp(base + offset + across * d, lo, hi)).a;
         float behind = content.eval(clamp(base + offset - across * d, lo, hi)).a;
-        float edge = (ahead - behind) * slope * rimPrism;
+        float edge = (ahead - behind) * slope * rimPrism * clamp(-n.y, 0.0, 1.0);
         float warm = clamp(edge, 0.0, 1.0);
         float cool = clamp(-edge, 0.0, 1.0);
         float bandWarm = max(warm - lastWarm, 0.0);
         float bandCool = max(cool - lastCool, 0.0);
         lastWarm = max(lastWarm, warm);
         lastCool = max(lastCool, cool);
-        float3 warmColor = i == 1 ? float3(1.0, 0.86, 0.25) : (i == 2 ? float3(0.45, 0.95, 0.45) : float3(0.35, 0.6, 1.0));
-        float3 coolColor = i == 1 ? float3(1.0, 0.55, 0.2) : (i == 2 ? float3(1.0, 0.25, 0.35) : float3(0.7, 0.35, 1.0));
+        float3 warmColor = i == 1 ? float3(1.0, 0.85, 0.22) : float3(1.0, 0.96, 0.6);
+        float3 coolColor = i == 1 ? float3(0.92, 0.3, 0.78) : float3(0.42, 0.5, 1.0);
         fringe += float4(warmColor * bandWarm + coolColor * bandCool, bandWarm + bandCool);
       }
       fringe = fringe / max(1.0, fringe.a);
@@ -251,8 +299,16 @@ half4 main(float2 coord) {
     col = clamp(mix(float3(lum), col, amount), float3(0.0), float3(1.0));
   }
 
+  if (lift > 0.0) {
+    float dark = 1.0 - luma(col);
+    col = min(col + float3(lift * dark * dark), float3(1.0));
+  }
   float4 tintColor = float4(tint);
-  col = mix(col, tintColor.rgb, tintColor.a);
+  col = mix(col, tintColor.rgb, tintColor.a * (1.0 - frosted * frostClear));
+  if (chroma != 1.0) {
+    float washed = luma(col);
+    col = clamp(mix(float3(washed), col, chroma), float3(0.0), float3(1.0));
+  }
   if (adaptive > 0.0) {
     float e = smoothstep(0.35, 0.75, luma(col));
     col = mix(col, mix(col, float3(1.0 - e), 0.14 + 0.08 * e), adaptive);

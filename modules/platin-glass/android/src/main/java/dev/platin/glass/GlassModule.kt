@@ -26,6 +26,9 @@ class GlassModule : Module() {
 
     View(GlassView::class) {
       Name("PlatinGlassView")
+      Events("onBackdropLuma")
+
+      Prop("sampleBackdrop") { view: GlassView, value: Boolean? -> view.sampleBackdrop = value ?: false }
 
       Prop("group") { view: GlassView, group: String? ->
         view.group = group ?: GlassRegistry.DEFAULT_GROUP
@@ -81,6 +84,24 @@ class GlassModule : Module() {
       Prop("wallSide") { view: GlassView, value: Float? -> view.wallSide = value ?: 0f }
       Prop("wallRound") { view: GlassView, value: Float? -> view.wallRound = value ?: 1f }
       Prop("wallLead") { view: GlassView, value: Float? -> view.wallLead = value ?: 1f }
+      Prop("topBend") { view: GlassView, value: Float? -> view.topBend = value ?: 1f }
+      Prop("topDepth") { view: GlassView, value: Float? -> view.topDepth = value ?: 1f }
+      Prop("mirror") { view: GlassView, value: Float? -> view.mirror = value ?: 0f }
+      Prop("chroma") { view: GlassView, value: Float? -> view.chroma = value ?: 1f }
+      Prop("blurRadiusY") { view: GlassView, value: Float? -> view.blurRadiusY = value ?: -1f }
+      Prop("lift") { view: GlassView, value: Float? -> view.lift = value ?: 0f }
+      Prop("foldTop") { view: GlassView, value: Float? -> view.foldTop = value ?: 1f }
+      Prop("pullBottom") { view: GlassView, value: Float? -> view.pullBottom = value ?: 0f }
+      Prop("pullBand") { view: GlassView, value: Float? -> view.pullBand = value ?: 1f }
+      Prop("wideRadius") { view: GlassView, value: Float? -> view.wideRadius = value ?: 0f }
+      Prop("wideMix") { view: GlassView, value: Float? -> view.wideMix = value ?: 0f }
+      Prop("frost") { view: GlassView, value: Float? -> view.frost = value ?: 0f }
+      Prop("frostClear") { view: GlassView, value: Float? -> view.frostClear = value ?: 0f }
+      Prop("frostRadius") { view: GlassView, value: Float? -> view.frostRadius = value ?: 0f }
+      Prop("frostLeft") { view: GlassView, value: Float? -> view.frostLeft = value ?: 0f }
+      Prop("frostTop") { view: GlassView, value: Float? -> view.frostTop = value ?: 0f }
+      Prop("frostRight") { view: GlassView, value: Float? -> view.frostRight = value ?: 0f }
+      Prop("frostBottom") { view: GlassView, value: Float? -> view.frostBottom = value ?: 0f }
       Prop("clipLeft") { view: GlassView, value: Float? -> view.clipLeft = value ?: 0f }
       Prop("clipTop") { view: GlassView, value: Float? -> view.clipTop = value ?: 0f }
       Prop("clipRight") { view: GlassView, value: Float? -> view.clipRight = value ?: 0f }
