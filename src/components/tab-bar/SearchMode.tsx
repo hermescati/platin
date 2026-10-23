@@ -65,19 +65,19 @@ export const SearchMode = ({ active, mode, backTab, backPress, onBack }: Props) 
         <Animated.View style={[StyleSheet.absoluteFill, backStyle]}>
           <Animated.View style={[styles.fill, { backgroundColor: color.chrome.pressFill }, backFillStyle]} />
           <Animated.View style={[styles.center, backInkStyle]}>
-            <Icon name={backTab.icon} variant="fill" size={layout.tabIconSize} />
+            <Icon name={backTab.icon} size={layout.tabIconSize} />
           </Animated.View>
         </Animated.View>
       </Pressable>
       <Animated.View style={[styles.field, contentStyle]}>
-        <Icon name="search" size={layout.searchFieldIconSize} tone="secondary" />
+        <Icon name="search" size={layout.searchFieldIconSize} />
         <TextInput
           ref={input}
           style={[styles.input, { color: color.text.primary }]}
           value={query}
           onChangeText={setQuery}
           placeholder={searchPlaceholder}
-          placeholderTextColor={color.text.secondary}
+          placeholderTextColor={color.text.placeholder}
           selectionColor={color.accent.default}
           cursorColor={color.accent.default}
           returnKeyType="search"

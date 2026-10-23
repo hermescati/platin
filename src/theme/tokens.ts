@@ -145,7 +145,7 @@ export interface Palette {
     sheetGroup: string;
     toast: string;
   };
-  text: { primary: string; secondary: string; tertiary: string; onAccent: string };
+  text: { primary: string; secondary: string; tertiary: string; placeholder: string; onAccent: string };
   line: { hairline: string; track: string; strong: string };
   overlay: { scrim: string };
   accent: { default: string; fill: string; pressed: string; tint: string };
@@ -205,7 +205,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       sheetGroup: n[800],
       toast: n[950],
     },
-    text: { primary: n[0], secondary: n[400], tertiary: n[500], onAccent: n[950] },
+    text: { primary: n[0], secondary: n[400], tertiary: n[500], placeholder: 'rgba(235, 235, 245, 0.3)', onAccent: n[950] },
     line: { hairline: withAlpha(white, 0.1), track: withAlpha(white, 0.08), strong: withAlpha(white, 0.22) },
     overlay: { scrim: withAlpha(black, 0.55) },
     accent: { default: a[500], fill: a[500], pressed: a[600], tint: withAlpha(a[500], 0.14) },
@@ -270,7 +270,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       sheetGroup: n[50],
       toast: n[0],
     },
-    text: { primary: n[1000], secondary: n[600], tertiary: n[500], onAccent: n[950] },
+    text: { primary: n[1000], secondary: n[600], tertiary: n[500], placeholder: 'rgba(60, 60, 67, 0.3)', onAccent: n[950] },
     line: { hairline: withAlpha(black, 0.1), track: withAlpha(black, 0.06), strong: withAlpha(black, 0.16) },
     overlay: { scrim: withAlpha(black, 0.2) },
     accent: { default: a[700], fill: a[500], pressed: a[600], tint: withAlpha(a[500], 0.16) },
