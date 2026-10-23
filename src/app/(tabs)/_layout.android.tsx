@@ -16,7 +16,7 @@ const TabsLayout = () => (
         <TabBarCollapseProvider>
           <Tabs style={styles.fill}>
             <GlassBackdrop>
-              <TabSlot />
+              <TabSlot detachInactiveScreens={false} />
             </GlassBackdrop>
             <FloatingTabBar />
             <TabList style={styles.hidden}>

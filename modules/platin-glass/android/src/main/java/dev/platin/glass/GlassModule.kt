@@ -78,6 +78,9 @@ class GlassModule : Module() {
       Prop("pinchRight") { view: GlassView, value: Float? -> view.pinchRight = value ?: 0f }
       Prop("sampleMaxX") { view: GlassView, value: Float? -> view.sampleMaxX = value ?: 0f }
       Prop("ellipse") { view: GlassView, value: Float? -> view.ellipse = value ?: 0f }
+      Prop("wallSide") { view: GlassView, value: Float? -> view.wallSide = value ?: 0f }
+      Prop("wallRound") { view: GlassView, value: Float? -> view.wallRound = value ?: 1f }
+      Prop("wallLead") { view: GlassView, value: Float? -> view.wallLead = value ?: 1f }
       Prop("clipLeft") { view: GlassView, value: Float? -> view.clipLeft = value ?: 0f }
       Prop("clipTop") { view: GlassView, value: Float? -> view.clipTop = value ?: 0f }
       Prop("clipRight") { view: GlassView, value: Float? -> view.clipRight = value ?: 0f }

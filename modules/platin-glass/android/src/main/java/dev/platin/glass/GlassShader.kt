@@ -51,6 +51,7 @@ uniform float2 clipScale;
 uniform float clipSoft;
 uniform float clipOn;
 uniform float alphaPass;
+uniform float3 wall;
 layout(color) uniform half4 tint;
 layout(color) uniform half4 rim;
 layout(color) uniform half4 shadow;
@@ -62,6 +63,18 @@ float capsule(float2 p, float4 rect) {
   if (radius > 0.0) {
     r = min(r, radius);
   }
+  float2 q = abs(p - center) - extent + float2(r);
+  return min(max(q.x, q.y), 0.0) + length(max(q, float2(0.0))) - r;
+}
+
+float wallCapsule(float2 p, float4 rect) {
+  float2 center = (rect.xy + rect.zw) * 0.5;
+  float2 extent = max((rect.zw - rect.xy) * 0.5, float2(0.0));
+  float r = min(extent.x, extent.y);
+  if (radius > 0.0) {
+    r = min(r, radius);
+  }
+  r *= (p.x - center.x) * wall.x > 0.0 ? wall.y : wall.z;
   float2 q = abs(p - center) - extent + float2(r);
   return min(max(q.x, q.y), 0.0) + length(max(q, float2(0.0))) - r;
 }
@@ -92,7 +105,7 @@ float field(float2 p) {
   float d = 100000.0;
   for (int i = 0; i < 4; i++) {
     if (float(i) < shapeCount) {
-      float shape = capsule(p, shapes[i]);
+      float shape = i == 0 && wall.x != 0.0 ? wallCapsule(p, shapes[i]) : capsule(p, shapes[i]);
       if (i == 0 && ellipse > 0.0) {
         shape = mix(shape, oval(p, shapes[i]), ellipse);
       }

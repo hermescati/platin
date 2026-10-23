@@ -186,6 +186,8 @@ export interface Palette {
     pressFill: string;
     pressLift: string;
     lensTint: string;
+    lensGlideTint: string;
+    lensGlideRim: string;
     tabAccent: string;
     lensRimEarly: string;
     lensTintEarly: string;
@@ -251,6 +253,8 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       pressFill: 'rgba(255, 255, 255, 0.38)',
       pressLift: 'rgba(255, 255, 255, 0.038)',
       lensTint: 'rgba(0, 0, 0, 0.2)',
+      lensGlideTint: 'rgba(0, 0, 0, 0.04)',
+      lensGlideRim: 'rgba(0, 0, 0, 0.55)',
       tabAccent: '#F8A154',
       lensRimEarly: 'rgba(255, 255, 255, 0.16)',
       lensTintEarly: 'rgba(255, 255, 255, 0)',
@@ -316,6 +320,8 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       pressFill: 'rgba(255, 255, 255, 1)',
       pressLift: 'rgba(255, 255, 255, 0.25)',
       lensTint: 'rgba(0, 0, 0, 0.025)',
+      lensGlideTint: 'rgba(0, 0, 0, 0.025)',
+      lensGlideRim: 'rgba(0, 0, 0, 0.16)',
       tabAccent: a[700],
       lensRimEarly: 'rgba(0, 0, 0, 0.06)',
       lensTintEarly: 'rgba(255, 255, 255, 0)',
@@ -465,6 +471,9 @@ export const glass = {
   lensMagnify: 0.2,
   lensSpecular: 0.22,
   lensEdgeShade: { dark: -0.45, light: -0.04 },
+  lensGlideEdge: { dark: 0.12, light: -0.04 },
+  lensGlideColour: { dark: 0.35, light: 1 },
+  lensGlidePinch: { dark: 0.3, light: 1 },
   lensRimSide: { dark: 1, light: 3 },
   lensRimWidth: { dark: 2, light: 1.25 },
   lensShadeWidth: 1,
@@ -526,6 +535,10 @@ export const motion = {
     impact: 0.24,
     speedCap: 12,
     bulge: 1.1,
+    barBulge: 14,
+    flatRate: 3.5,
+    flatRound: 0.15,
+    leadRound: 0.88,
     max: 0.3,
     memory: 3,
     contact: 2,
@@ -539,7 +552,7 @@ export const motion = {
   itemMagnify: 0,
   canal: { overflow: 2, give: 0.3, spread: 0.8, soft: 6 },
   tapSlide: {
-    extraHeight: 4,
+    canal: 0,
     drop: 0.5,
     lead: 490,
     leadPerSlot: 140,
@@ -560,6 +573,28 @@ export const motion = {
   },
   barGrow: { x: 6, y: 2.5, towardSearch: 1 },
   lensEdgeReach: 3,
+  switchTravel: {
+    duration: 440,
+    perSlot: 20,
+    dampingRatio: 1,
+    kick: 0,
+    kickPerSlot: 0,
+    delay: 0,
+    height: 0.92,
+    colour: 0.7,
+    optics: 1,
+    wide: 1.1,
+    hold: 50,
+    squishPeriod: 0.75,
+    squishDamping: 0.75,
+    squishKick: 0.35,
+    contactZone: 0.1,
+    railGap: 2,
+    heightToWidth: 0.5,
+    squishBulge: 2.6,
+    clearFrom: 0.35,
+  },
+  highlightFade: { from: 0.3, to: 0.2 },
   tapLanding: { wide: 0.06, flat: 0.12, drop: 6, tint: 0.3, hold: 1.5, glassHold: 4, iconHold: 4 },
   tapLens: {
     ellipse: 0.35,

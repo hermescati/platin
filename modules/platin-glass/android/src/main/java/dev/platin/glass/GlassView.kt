@@ -75,6 +75,9 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var pinchRight = 0f
   var sampleMaxX = 0f
   var ellipse = 0f
+  var wallSide = 0f
+  var wallRound = 1f
+  var wallLead = 1f
   var clipLeft = 0f
   var clipTop = 0f
   var clipRight = 0f
@@ -96,6 +99,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   private val backdropToSelf = Matrix()
   private val inverse = Matrix()
   private val shapeBuffer = FloatArray(MAX_SHAPES * 4)
+  private val wallRadii = FloatArray(8)
   private val state = FloatArray(STATE_SIZE)
   private val lastState = FloatArray(STATE_SIZE) { Float.NaN }
   private var reducedTransparency = false
@@ -296,6 +300,9 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = if (opaque) 0f else pinchRight * density
     state[i++] = sampleMaxX * density
     state[i++] = ellipse
+    state[i++] = wallSide
+    state[i++] = wallRound
+    state[i++] = wallLead
     state[i++] = clipLeft * density
     state[i++] = clipTop * density
     state[i++] = clipRight * density
@@ -357,6 +364,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setFloatUniform("pinchRight", state[u++])
     glassShader.setFloatUniform("sampleMaxX", state[u++])
     glassShader.setFloatUniform("ellipse", state[u++])
+    glassShader.setFloatUniform("wall", state[u], state[u + 1], state[u + 2])
+    u += 3
     glassShader.setFloatUniform("clipRect", state[u], state[u + 1], state[u + 2], state[u + 3])
     u += 4
     glassShader.setFloatUniform("clipScale", state[u], state[u + 1])
@@ -416,7 +425,23 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
       } else {
         var r = min(right - left, bottom - top) * 0.5f
         if (corner > 0f) r = min(r, corner)
-        shapePath.addRoundRect(shapeRect, r, r, Path.Direction.CW)
+        if (i == 0 && wallSide != 0f) {
+          val tight = r * wallRound
+          val lead = r * wallLead
+          val leftR = if (wallSide < 0f) tight else lead
+          val rightR = if (wallSide > 0f) tight else lead
+          wallRadii[0] = leftR
+          wallRadii[1] = leftR
+          wallRadii[2] = rightR
+          wallRadii[3] = rightR
+          wallRadii[4] = rightR
+          wallRadii[5] = rightR
+          wallRadii[6] = leftR
+          wallRadii[7] = leftR
+          shapePath.addRoundRect(shapeRect, wallRadii, Path.Direction.CW)
+        } else {
+          shapePath.addRoundRect(shapeRect, r, r, Path.Direction.CW)
+        }
       }
       if (any) plainPath.op(shapePath, Path.Op.UNION) else plainPath.set(shapePath)
       any = true
@@ -557,6 +582,6 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     val EDGE_STOPS = floatArrayOf(0f, 0.3f, 0.7f, 1f)
     const val ADAPTIVE_LIFT = 0.14f
     const val ADAPTIVE_DARKEN = 0.22f
-    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 53 + 12
+    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 12
   }
 }

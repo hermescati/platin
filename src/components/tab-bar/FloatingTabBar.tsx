@@ -123,7 +123,13 @@ const TabItem = ({
       { scale: 1 + lift.get() * proximity.get() * motion.itemMagnify },
     ],
   }));
-  const highlight = useDerivedValue(() => (revealed ? 1 : chosen.get() * presence.get() * (1 - lift.get())));
+  const highlight = useDerivedValue(() =>
+    revealed
+      ? 1
+      : chosen.get() *
+        presence.get() *
+        clamp01((motion.highlightFade.from - lift.get()) / (motion.highlightFade.from - motion.highlightFade.to)),
+  );
   const activeStyle = useAnimatedStyle(() => ({ opacity: highlight.get() }));
   const glow = useDerivedValue(() => (revealed ? shine.get() : 0));
   const activeRestStyle = useAnimatedStyle(() => ({ opacity: highlight.get() }));
@@ -262,9 +268,12 @@ export const FloatingTabBar = () => {
   const tapStay = useSharedValue(0);
   const landing = useSharedValue(0);
   const tapDipping = useSharedValue(false);
-  const shine = useDerivedValue(() => lift.get() * (1 - tapSlide.get() * (1 - tapStay.get())));
+  const gliding = useSharedValue(false);
+  const glideTo = useSharedValue(0);
+  const glideSpan = useSharedValue(1);
+  const slideShape = useDerivedValue(() => tapSlide.get() * (1 - tapStay.get()) * motion.tapSlide.canal);
+  const shine = useDerivedValue(() => lift.get() * (1 - slideShape.get()));
   const held = useDerivedValue(() => lerp(1, barPress.get(), tapStay.get()));
-  const slideShape = useDerivedValue(() => tapSlide.get() * (1 - tapStay.get()));
   const squishVelocity = useSharedValue(0);
   const wallSide = useSharedValue(0);
   const approachSpeed = useSharedValue(0);
@@ -413,32 +422,22 @@ export const FloatingTabBar = () => {
         tapDipping.set(dipping);
         lift.set(dipping ? withSequence(withSpring(motion.tapLens.dip, motion.springs.tapDip), rise) : rise);
       }
+      gliding.set(switching);
+      glideTo.set(index);
+      glideSpan.set(Math.abs(index - lensPosition.get()));
       if (switching) {
-        const extra = Math.max(0, Math.abs(index - focused.get()) - 1);
-        const reach = lastIndex > 1 ? extra / (lastIndex - 1) : 1;
-        const lead = {
-          duration: motion.tapSlide.lead + motion.tapSlide.leadPerSlot * extra,
-          dampingRatio: lerp(motion.tapSlide.leadDamping, motion.tapSlide.farDamping, reach),
-        };
-        const trail = {
-          duration: motion.tapSlide.trail + motion.tapSlide.trailPerSlot * extra,
-          dampingRatio: 1,
-        };
-        sliding.set(true);
-        const width = itemWidth.get();
-        const center = barWidth.get() / 2 + pillShiftX.get() + (index - middleIndex) * width;
-        const half = Math.min(layout.bubbleRestWidth, width + space[6]) / 2;
-        const rightward = index > focused.get();
-        slideRight.set(rightward);
-        slideFrom.set(rightward ? rightEdge.get() : leftEdge.get());
-        slideTo.set(rightward ? center + half : center - half);
-        leftTarget.set(center - half);
-        rightTarget.set(center + half);
-        leftEdge.set(withSpring(center - half, rightward ? trail : lead));
-        rightEdge.set(withSpring(center + half, rightward ? lead : trail));
-        jelly.set(0);
-        jellyVelocity.set(0);
-        lensPosition.set(withSpring(index, lead));
+        const distance = index - lensPosition.get();
+        const extra = Math.max(0, Math.abs(distance) - 1);
+        lensPosition.set(
+          withDelay(
+            motion.switchTravel.delay,
+            withSpring(index, {
+              duration: motion.switchTravel.duration + motion.switchTravel.perSlot * extra,
+              dampingRatio: motion.switchTravel.dampingRatio,
+              velocity: Math.sign(distance) * (motion.switchTravel.kick + motion.switchTravel.kickPerSlot * extra),
+            }),
+          ),
+        );
       } else {
         lensPosition.set(withSpring(index, motion.springs.lens));
       }
@@ -452,6 +451,7 @@ export const FloatingTabBar = () => {
         return;
       }
       moved.set(true);
+      gliding.set(false);
       tapSlide.set(withSpring(0, motion.springs.lift));
       sliding.set(false);
       settleOnArrival.set(false);
@@ -504,14 +504,21 @@ export const FloatingTabBar = () => {
           quick
             ? dipping
               ? withSequence(withSpring(motion.tapLens.dip, motion.springs.tapDip), rise, settle)
-              : withSequence(rise, firm ? withSpring(0, motion.springs.landFall) : settle)
+              : withSequence(
+                  rise,
+                  firm
+                    ? withSpring(0, motion.springs.landFall)
+                    : gliding.get()
+                      ? withDelay(motion.switchTravel.hold, settle)
+                      : settle,
+                )
             : settle,
         );
         tapDipping.set(false);
       }
       barPress.set(withSpring(0, motion.springs.barPressOut));
       if (index >= 0) {
-        if (!tapping) {
+        if (!tapping && !(gliding.get() && index === glideTo.get())) {
           lensPosition.set(withSpring(index, motion.springs.lens));
         }
         settledIndex.set(index);
@@ -551,25 +558,30 @@ export const FloatingTabBar = () => {
       2 * motion.jelly.damping * omega * jellyVelocity.get() +
       motion.jelly.kick * acceleration * lift.get();
     approachSpeed.set(Math.max(approachSpeed.get() * Math.exp(-dt * motion.squish.memory), filteredSpeed));
-    const nearLeft =
-      position <= motion.jelly.endZone && Math.abs(leftEdge.get() - leftTarget.get()) < motion.squish.contact;
+    const endZone = gliding.get() ? motion.switchTravel.contactZone : motion.jelly.endZone;
+    const nearLeft = position <= endZone && Math.abs(leftEdge.get() - leftTarget.get()) < motion.squish.contact;
     const nearRight =
-      position >= lastIndex - motion.jelly.endZone &&
-      Math.abs(rightEdge.get() - rightTarget.get()) < motion.squish.contact;
+      position >= lastIndex - endZone && Math.abs(rightEdge.get() - rightTarget.get()) < motion.squish.contact;
     const endReached = nearLeft || nearRight;
-    if (endReached && !atEnd.get() && (lift.get() > 0.5 || sliding.get())) {
+    if (endReached && !atEnd.get() && (lift.get() > 0.5 || sliding.get() || gliding.get())) {
       wallSide.set(nearLeft ? -1 : 1);
       squishVelocity.set(
         squishVelocity.get() +
-          Math.min(approachSpeed.get(), motion.squish.speedCap) *
-            motion.squish.impact *
-            lerp(1, motion.tapSlide.impact, tapSlide.get()),
+          (gliding.get()
+            ? motion.switchTravel.squishKick * glideSpan.get()
+            : Math.min(approachSpeed.get(), motion.squish.speedCap) *
+              motion.squish.impact *
+              lerp(1, motion.tapSlide.impact, tapSlide.get())),
       );
     }
     atEnd.set(endReached);
-    const squishOmega = (2 * Math.PI) / motion.squish.period;
+    const squishOmega = (2 * Math.PI) / (gliding.get() ? motion.switchTravel.squishPeriod : motion.squish.period);
     const squishForce =
-      -squishOmega * squishOmega * squish.get() - 2 * motion.squish.damping * squishOmega * squishVelocity.get();
+      -squishOmega * squishOmega * squish.get() -
+      2 *
+        (gliding.get() ? motion.switchTravel.squishDamping : motion.squish.damping) *
+        squishOmega *
+        squishVelocity.get();
     const nextSquishVelocity = squishVelocity.get() + squishForce * dt;
     squishVelocity.set(nextSquishVelocity);
     squish.set(Math.min(motion.squish.max, Math.max(-motion.squish.max, squish.get() + nextSquishVelocity * dt)));
@@ -595,7 +607,9 @@ export const FloatingTabBar = () => {
       lift.get(),
       Math.min(1, landing.get() * tapStay.get() * tapSlide.get() * motion.tapLanding.hold),
     );
-    const halfWidth = lerp(restHalf, (width / 2) * motion.lensLift.x, spread * free);
+    const halfWidth =
+      lerp(restHalf, (width / 2) * motion.lensLift.x, spread * free) *
+      lerp(1, motion.switchTravel.wide, gliding.get() ? lift.get() : 0);
     const left = center - halfWidth;
     const right = center + halfWidth;
     restSpan.set(halfWidth * 2);
@@ -631,7 +645,10 @@ export const FloatingTabBar = () => {
       sliding.set(false);
     }
 
-    if (tapStay.get() === 1 && !moved.get() && held.get() < 0.5) {
+    if (gliding.get() && lift.get() < 0.001 && Math.abs(position - glideTo.get()) < 0.002) {
+      gliding.set(false);
+    }
+    if (gliding.get() || (tapStay.get() === 1 && !moved.get() && held.get() < 0.5)) {
       leftTarget.set(left);
       rightTarget.set(right);
       leftEdge.set(left);
@@ -680,8 +697,8 @@ export const FloatingTabBar = () => {
         layout.bubbleRestHeight / lensFullHeight,
         lerp(
           lerp(motion.lensLift.y, motion.tapLens.liftY, tapStay.get() * tapSlide.get()),
-          (fullHeight + motion.tapSlide.extraHeight) / lensFullHeight,
-          slide,
+          (fullHeight * motion.switchTravel.height) / lensFullHeight,
+          tapSlide.get() * (1 - tapStay.get()),
         ),
         lift.get(),
       ),
@@ -702,7 +719,7 @@ export const FloatingTabBar = () => {
     let scaleY =
       base *
       (1 - jelly.get() * motion.jelly.thin * lerp(1, motion.tapSlide.jellyY, slide)) *
-      (1 + squish.get() * motion.squish.bulge);
+      (1 + squish.get() * (gliding.get() ? motion.switchTravel.squishBulge : motion.squish.bulge));
     let scaleX =
       (fullWidth > 0 ? Math.max(span / fullWidth, 0.01) : 1) *
       (1 + pressSquash.get() * motion.pressSquashX) *
@@ -717,6 +734,16 @@ export const FloatingTabBar = () => {
         (1 - motion.canal.give) *
         lerp(motion.canal.spread, motion.tapSlide.wallSpread, slide) *
         (lensFullHeight / fullWidth);
+    }
+    if (gliding.get()) {
+      const knee = (fullHeight * motion.switchTravel.height) / lensFullHeight;
+      const cap = (fullHeight - 2 * motion.switchTravel.railGap) / lensFullHeight;
+      if (scaleY > knee && cap > knee) {
+        const room = cap - knee;
+        const capped = knee + room * Math.tanh((scaleY - knee) / room);
+        scaleX += (scaleY - capped) * motion.switchTravel.heightToWidth * (lensFullHeight / fullWidth);
+        scaleY = capped;
+      }
     }
     const land = landing.get() * tapStay.get() * tapSlide.get();
     scaleX *= 1 + land * motion.tapLanding.wide;
@@ -805,6 +832,7 @@ export const FloatingTabBar = () => {
     return {
       opacity: Math.max(
         lensGlassOpacity.get(),
+        gliding.get() && lift.get() > 0 ? 1 : 0,
         clamp01(
           landing.get() * tapStay.get() * tapSlide.get() * motion.tapLanding.glassHold * motion.tapLanding.iconHold,
         ),
@@ -934,8 +962,15 @@ export const FloatingTabBar = () => {
 
     const growX = barPress.get() * motion.barGrow.x * (1 - settled);
     const grow = barPress.get() * motion.barGrow.y * (1 - settled);
-    const pillLeft = pillShiftX.get() + (width - width * scaleX.get()) / 2 - growX;
-    const pillRight = pillLeft + width * scaleX.get() + growX * (1 + motion.barGrow.towardSearch);
+    const wallBulge = Math.max(0, squish.get()) * motion.squish.barBulge * (1 - settled);
+    const pillLeft =
+      pillShiftX.get() + (width - width * scaleX.get()) / 2 - growX - (wallSide.get() < 0 ? wallBulge : 0);
+    const pillRight =
+      pillLeft +
+      width * scaleX.get() +
+      growX * (1 + motion.barGrow.towardSearch) +
+      (wallSide.get() < 0 ? wallBulge : 0) +
+      (wallSide.get() > 0 ? wallBulge : 0);
     const pillTop = fullHeight * (1 - scaleY.get()) - grow;
     const backGrow = modeRadius * motion.pressGrow * backPress.press.get() * settled;
     const backLeft = lerp(pillLeft, pillLeft + modeInset, settled) - backGrow;
@@ -1049,18 +1084,36 @@ export const FloatingTabBar = () => {
     };
   });
 
+  const glide = useDerivedValue(() => (gliding.get() ? 1 : 0));
+
+  const switchOptics = useDerivedValue(() => {
+    const fade = clamp01((lift.get() - motion.switchTravel.clearFrom) / (1 - motion.switchTravel.clearFrom));
+    return gliding.get() ? motion.switchTravel.optics * fade * fade * (3 - 2 * fade) : 1;
+  });
+
+  const wallFlat = useDerivedValue(() => {
+    const press = clamp01(Math.abs(squish.get()) * motion.squish.flatRate);
+    const flat = press * press;
+    return {
+      side: flat > 0.001 ? -wallSide.get() : 0,
+      round: lerp(1, motion.squish.flatRound, flat),
+      lead: lerp(1, motion.squish.leadRound, flat),
+    };
+  });
+
   const lensOptics = useDerivedValue(() => {
     const geometry = lensGeometry.get();
     const slide = slideShape.get();
     const canal = slide * lift.get();
     const optics = lerp(1, clamp01(lift.get() * motion.tapSlide.glassRamp), slide);
-    const bendScale = optics * lerp(1, motion.tapSlide.bend, slide);
+    const travel = switchOptics.get();
+    const bendScale = optics * lerp(1, motion.tapSlide.bend, slide) * travel;
     const centerX = inlinePad + layout.bubbleRestWidth / 2 + geometry.translateX;
     const centerY = fullHeight / 2 + geometry.translateY - barShiftY.get();
     const reveal = lensOut.get();
     return {
       refraction: glass.lensRefraction * bendScale * reveal,
-      magnify: glass.lensMagnify * optics * reveal,
+      magnify: glass.lensMagnify * optics * travel * reveal,
       dispersion: glass.lensDispersion * bendScale * reveal,
       ellipse: Math.max(canal, motion.tapLens.ellipse * lift.get() * (1 - held.get())),
       clipLeft: -motion.canal.overflow - centerX,
@@ -1071,6 +1124,9 @@ export const FloatingTabBar = () => {
       clipScaleY: Math.max(geometry.scaleY, 0.01),
       clipSoft: motion.canal.soft,
       clipOn: canal,
+      wallSide: wallFlat.get().side,
+      wallRound: wallFlat.get().round,
+      wallLead: wallFlat.get().lead,
     };
   });
 
@@ -1079,7 +1135,15 @@ export const FloatingTabBar = () => {
     return {
       ...optics,
       refraction: optics.refraction * glass.lensIconBend,
-      rimPrism: glass.lensIconPrism * lensOut.get(),
+      dispersion:
+        optics.dispersion *
+        lerp(motion.switchTravel.colour, 1, tapStay.get()) *
+        lerp(1, glass.lensGlideColour[scheme], glide.get()),
+      rimPrism:
+        glass.lensIconPrism *
+        lensOut.get() *
+        lerp(motion.switchTravel.colour, 1, tapStay.get()) *
+        lerp(1, glass.lensGlideColour[scheme], glide.get()),
     };
   });
 
@@ -1094,26 +1158,50 @@ export const FloatingTabBar = () => {
       lerp(motion.endMelt, 1, push.get()),
     );
     const sampleMaxX = (gapMiddle - lensCenter) / Math.max(geometry.scaleX, 0.01) + restWidth / 2 + glass.lensPad;
-    const pinchScale = lerp(1, motion.tapSlide.pinch, slideShape.get());
+    const pinchScale =
+      lerp(1, motion.tapSlide.pinch, slideShape.get()) *
+      switchOptics.get() *
+      lerp(1, glass.lensGlidePinch[scheme], glide.get());
     const reveal = lensOut.get();
+    const optics = lensOptics.get();
+    const glideColour = lerp(1, glass.lensGlideColour[scheme], glide.get());
+    const tint = interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensTint]);
     return {
-      ...lensOptics.get(),
+      ...optics,
+      dispersion: optics.dispersion * glideColour,
+      edgeSharp: lerp(glass.lensEdgeShade[scheme], glass.lensGlideEdge[scheme], glide.get()),
       sampleMaxX: Math.max(sampleMaxX, 1),
       pinch: glass.lensPinch * (1 - deflate.get()) * pinchScale * reveal,
       pinchLeft: glass.lensPinch * clamp01(1 - position / glass.lensPinchSideReach) * pinchScale * reveal,
       pinchRight:
         glass.lensPinch * clamp01(1 - (lastIndex - position) / glass.lensPinchSideReach) * pinchScale * reveal,
       specular: glass.lensSpecular * reveal,
-      rim: interpolateColor(reveal, [0, 1], [color.chrome.lensRimEarly, color.chrome.lensRim]),
-      rimPrism: glass.lensRimPrism[scheme] * reveal,
+      rim: interpolateColor(
+        reveal,
+        [0, 1],
+        [color.chrome.lensRimEarly, glide.get() ? color.chrome.lensGlideRim : color.chrome.lensRim],
+      ),
+      rimPrism: glass.lensRimPrism[scheme] * reveal * glideColour,
       shadow: interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensShadow]),
-      tint: interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensTint]),
+      tint: glide.get()
+        ? interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensGlideTint])
+        : tint,
     };
   });
 
-  const lensFillStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(1 - grey.get(), [0, 1], [color.chrome.lens, color.chrome.lensActive]),
-  }));
+  const lensFillStyle = useAnimatedStyle(() => {
+    const { side, round, lead } = wallFlat.get();
+    const full = lensFullHeight / 2;
+    const left = full * (side < 0 ? round : side > 0 ? lead : 1);
+    const right = full * (side > 0 ? round : side < 0 ? lead : 1);
+    return {
+      backgroundColor: interpolateColor(1 - grey.get(), [0, 1], [color.chrome.lens, color.chrome.lensActive]),
+      borderTopLeftRadius: left,
+      borderBottomLeftRadius: left,
+      borderTopRightRadius: right,
+      borderBottomRightRadius: right,
+    };
+  });
 
   return (
     <Animated.View
@@ -1234,7 +1322,6 @@ export const FloatingTabBar = () => {
             magnify={glass.lensMagnify}
             pinchWidth={glass.lensPinchWidth}
             pinchSpread={glass.lensPinchSpread}
-            edgeSharp={glass.lensEdgeShade[scheme]}
             sharpWidth={glass.lensShadeWidth}
             lightAngle={glass.lightAngle}
             rimSide={glass.lensRimSide[scheme]}

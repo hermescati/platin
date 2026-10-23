@@ -50,6 +50,9 @@ export interface NativeGlassViewProps extends ViewProps {
   pinchRight?: number;
   sampleMaxX?: number;
   ellipse?: number;
+  wallSide?: number;
+  wallRound?: number;
+  wallLead?: number;
   clipLeft?: number;
   clipTop?: number;
   clipRight?: number;
