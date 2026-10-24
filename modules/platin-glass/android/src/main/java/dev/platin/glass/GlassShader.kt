@@ -48,15 +48,15 @@ uniform float sampleMaxX;
 uniform float ellipse;
 uniform float topBend;
 uniform float topDepth;
-uniform float mirror;
-uniform float3 edgeY;
-uniform float2 wide;
+uniform float2 edgeY;
+uniform float2 edgeTop;
 uniform float4 frostRect;
 uniform float frost;
 uniform float frostClear;
 uniform float frostRadius;
+uniform float4 tone;
+uniform float4 frostTone;
 uniform float chroma;
-uniform float lift;
 uniform float4 clipRect;
 uniform float2 clipScale;
 uniform float clipSoft;
@@ -193,15 +193,13 @@ half4 main(float2 coord) {
   }
   base += pinchVec;
   float2 offset = n * float2(direction, directionY) * (slope * refraction * mix(1.0, topBend, clamp(-n.y, 0.0, 1.0)));
-  if (mirror > 0.0) {
-    float band = max(bezel, 1.0);
-    float2 fold = n * (2.0 * depth * (1.0 - smoothstep(band * 0.55, band, depth)));
-    fold.y *= n.y < 0.0 ? edgeY.x : 0.0;
-    offset = mix(offset, fold, mirror);
+  if (edgeTop.x != 0.0 && n.y < 0.0) {
+    float reachTop = 1.0 - clamp(depth / max(edgeTop.y, 1.0), 0.0, 1.0);
+    offset.y -= edgeTop.x * pow(reachTop, 1.7) * n.y;
   }
-  if (edgeY.y > 0.0 && n.y > 0.0) {
-    float reach = 1.0 - clamp(depth / max(edgeY.z, 1.0), 0.0, 1.0);
-    offset.y -= edgeY.y * pow(reach, 1.7) * n.y;
+  if (edgeY.x > 0.0 && n.y > 0.0) {
+    float reach = 1.0 - clamp(depth / max(edgeY.y, 1.0), 0.0, 1.0);
+    offset.y -= edgeY.x * pow(reach, 1.7) * n.y;
   }
   float2 lo = float2(0.5);
   float2 hi = float2(sampleMaxX > 0.0 ? min(size.x, sampleMaxX) : size.x, size.y) - float2(0.5);
@@ -235,17 +233,6 @@ half4 main(float2 coord) {
   }
 
   float frosted = frost > 0.0 ? frost * clamp(0.5 - capsule(coord, frostRect), 0.0, 1.0) : 0.0;
-  if ((wide.y > 0.0 || frosted > 0.0) && wide.x > 0.5) {
-    float2 at = base + offset;
-    float3 ring = float3(0.0);
-    for (int i = 0; i < 8; i++) {
-      float ang = float(i) * 0.785398;
-      float2 dir = float2(cos(ang), sin(ang));
-      ring += content.eval(clamp(at + dir * wide.x, lo, hi)).rgb;
-      ring += content.eval(clamp(at + dir.yx * float2(-1.0, 1.0) * wide.x * 0.5, lo, hi)).rgb;
-    }
-    col = mix(col, ring / 16.0, wide.y * (1.0 - frosted));
-  }
   if (frosted > 0.0 && frostRadius > 0.5) {
     float2 at = base + offset;
     float3 disc = float3(0.0);
@@ -299,15 +286,19 @@ half4 main(float2 coord) {
     col = clamp(mix(float3(lum), col, amount), float3(0.0), float3(1.0));
   }
 
-  if (lift > 0.0) {
-    float dark = 1.0 - luma(col);
-    col = min(col + float3(lift * dark * dark), float3(1.0));
-  }
   float4 tintColor = float4(tint);
   col = mix(col, tintColor.rgb, tintColor.a * (1.0 - frosted * frostClear));
-  if (chroma != 1.0) {
+  if (tone.w > 0.0) {
+    float base = mix(tone.x, frostTone.x, frosted);
+    float gain = mix(tone.y, frostTone.y, frosted);
+    float curve = mix(tone.z, frostTone.z, frosted);
+    float3 mapped = base + gain * pow(max(col, float3(0.0)), float3(curve));
+    col = mix(col, mapped, tone.w);
+  }
+  float saturate = tone.w > 0.0 ? mix(chroma, frostTone.w, frosted) : chroma;
+  if (saturate != 1.0) {
     float washed = luma(col);
-    col = clamp(mix(float3(washed), col, chroma), float3(0.0), float3(1.0));
+    col = clamp(mix(float3(washed), col, saturate), float3(0.0), float3(1.0));
   }
   if (adaptive > 0.0) {
     float e = smoothstep(0.35, 0.75, luma(col));

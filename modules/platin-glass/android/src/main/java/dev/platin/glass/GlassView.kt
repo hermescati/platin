@@ -27,7 +27,6 @@ import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
 import kotlin.math.cos
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -41,7 +40,6 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var cornerRadius = 0f
   var blend = 0f
   var blurRadius = 0f
-  var blurRadiusY = -1f
   var bezel = 0f
   var refraction = 0f
   var refractOutward = false
@@ -86,15 +84,23 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var wallLead = 1f
   var topBend = 1f
   var topDepth = 1f
-  var mirror = 0f
-  var foldTop = 1f
   var pullBottom = 0f
   var pullBand = 1f
+  var pullTop = 0f
+  var pullTopBand = 1f
   var wideRadius = 0f
   var wideMix = 0f
   var frost = 0f
   var frostClear = 0f
   var frostRadius = 0f
+  var toneBase = 0f
+  var toneGain = 1f
+  var toneGamma = 1f
+  var toneOn = 0f
+  var frostBase = 0f
+  var frostGain = 1f
+  var frostGamma = 1f
+  var frostChroma = 1f
   var sampleBackdrop = false
     set(value) {
       field = value
@@ -111,7 +117,6 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var frostRight = 0f
   var frostBottom = 0f
   var chroma = 1f
-  var lift = 0f
   var clipLeft = 0f
   var clipTop = 0f
   var clipRight = 0f
@@ -153,6 +158,9 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice ?: false
   private val plainNode: RenderNode? =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("PlatinGlassPlain") else null
+  private val wideNode: RenderNode? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("PlatinGlassWide") else null
+  private var wideSigma = -1f
   private var plainBlur = -1f
   private val plainPath = Path()
   private val shapePath = Path()
@@ -288,12 +296,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     return if (side == Float.MAX_VALUE) 0f else side
   }
 
-  private fun blurY(radiusPx: Float): Float =
-    if (blurRadiusY >= 0f && radiusPx > 0f) blurRadiusY * density else radiusPx
-
   private fun blur(radiusPx: Float): RenderEffect? {
-    val y = blurY(radiusPx)
-    return if (radiusPx > 0f || y > 0f) RenderEffect.createBlurEffect(max(radiusPx, 0.01f), max(y, 0.01f), Shader.TileMode.CLAMP) else null
+    return if (radiusPx > 0f) RenderEffect.createBlurEffect(radiusPx, radiusPx, Shader.TileMode.CLAMP) else null
   }
 
   private fun putColor(index: Int, color: Color): Int {
@@ -397,15 +401,11 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = clipOn
     state[i++] = topBend
     state[i++] = topDepth
-    state[i++] = if (opaque) 0f else mirror
     state[i++] = if (opaque) 1f else chroma
-    state[i++] = blurRadiusY
-    state[i++] = if (opaque) 0f else lift
-    state[i++] = foldTop
     state[i++] = if (opaque) 0f else pullBottom * density
     state[i++] = pullBand * density
-    state[i++] = wideRadius * density
-    state[i++] = if (opaque) 0f else wideMix
+    state[i++] = if (opaque) 0f else pullTop * density
+    state[i++] = pullTopBand * density
     state[i++] = frostLeft * density
     state[i++] = frostTop * density
     state[i++] = frostRight * density
@@ -413,6 +413,14 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = if (opaque) 0f else frost
     state[i++] = frostClear
     state[i++] = frostRadius * density
+    state[i++] = toneBase
+    state[i++] = toneGain
+    state[i++] = toneGamma
+    state[i++] = if (opaque) 0f else toneOn
+    state[i++] = frostBase
+    state[i++] = frostGain
+    state[i++] = frostGamma
+    state[i++] = frostChroma
     i = putColor(i, if (opaque) fallback else tint)
     i = putColor(i, rim)
     putColor(i, shadow)
@@ -476,19 +484,19 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setFloatUniform("clipOn", state[u++])
     glassShader.setFloatUniform("topBend", state[u++])
     glassShader.setFloatUniform("topDepth", state[u++])
-    glassShader.setFloatUniform("mirror", state[u++])
     glassShader.setFloatUniform("chroma", state[u++])
-    u++
-    glassShader.setFloatUniform("lift", state[u++])
-    glassShader.setFloatUniform("edgeY", state[u], state[u + 1], state[u + 2])
-    u += 3
-    glassShader.setFloatUniform("wide", state[u], state[u + 1])
+    glassShader.setFloatUniform("edgeY", state[u], state[u + 1])
+    u += 2
+    glassShader.setFloatUniform("edgeTop", state[u], state[u + 1])
     u += 2
     glassShader.setFloatUniform("frostRect", state[u], state[u + 1], state[u + 2], state[u + 3])
     u += 4
     glassShader.setFloatUniform("frost", state[u++])
     glassShader.setFloatUniform("frostClear", state[u++])
-    glassShader.setFloatUniform("frostRadius", state[u])
+    glassShader.setFloatUniform("frostRadius", state[u++])
+    glassShader.setFloatUniform("tone", state[u], state[u + 1], state[u + 2], state[u + 3])
+    u += 4
+    glassShader.setFloatUniform("frostTone", state[u], state[u + 1], state[u + 2], state[u + 3])
     glassShader.setColorUniform("tint", if (opaque) fallback else tint)
     glassShader.setColorUniform("rim", rim)
     glassShader.setColorUniform("shadow", shadow)
@@ -510,6 +518,27 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !canvas.isHardwareAccelerated) return
     if (!prepareBackdrop()) return
     drawBackdrops(canvas)
+    drawWide(canvas)
+  }
+
+  private fun drawWide(canvas: Canvas) {
+    val node = wideNode ?: return
+    val sigma = wideRadius * density * WIDE_SIGMA_RATIO
+    val opaque = reducedTransparency && fallback.alpha() > 0f
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || opaque || wideMix <= 0f || sigma <= 0f) return
+    node.setPosition(0, 0, width, height)
+    if (sigma != wideSigma) {
+      node.setRenderEffect(RenderEffect.createBlurEffect(sigma, sigma, Shader.TileMode.CLAMP))
+      wideSigma = sigma
+    }
+    node.setAlpha(wideMix.coerceAtMost(1f))
+    val recording = node.beginRecording(width, height)
+    try {
+      drawBackdrops(recording)
+    } finally {
+      node.endRecording()
+    }
+    canvas.drawRenderNode(node)
   }
 
   private fun prepareBackdrop(): Boolean {
@@ -691,6 +720,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     const val REFERENCE_SIDE = 110f
     const val BEZEL_RATIO = 0.5f
     const val REFRACTION_RATIO = 1.2f
+    const val WIDE_SIGMA_RATIO = 0.6f
     const val HIGHLIGHT_RATIO = 0.05f
     const val MIN_BAND = 2f
     const val GLOW_REACH = 2.5f
@@ -699,7 +729,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     val EDGE_STOPS = floatArrayOf(0f, 0.3f, 0.7f, 1f)
     const val ADAPTIVE_LIFT = 0.14f
     const val ADAPTIVE_DARKEN = 0.22f
-    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 30
+    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 34
     const val SAMPLE_SIZE = 8
     const val SAMPLE_INTERVAL_MS = 150L
     const val SAMPLE_INSET = 6f

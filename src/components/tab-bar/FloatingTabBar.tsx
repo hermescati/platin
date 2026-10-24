@@ -225,11 +225,11 @@ export const FloatingTabBar = () => {
   const [activeInk, setActiveInk] = useState(color.chrome.tabActive);
   const onBackdropLuma = useCallback(
     (event: { nativeEvent: { luma: number } }) => {
-      const { from, to, step } = glass.inkLuma;
+      const { from, to, step } = glass.inkLuma[scheme];
       const tone = Math.round(clamp01((event.nativeEvent.luma - from) / (to - from)) / step) * step;
       setActiveInk(mixHex(color.chrome.tabActiveOver, color.chrome.tabActive, tone));
     },
-    [color.chrome.tabActive, color.chrome.tabActiveOver],
+    [color.chrome.tabActive, color.chrome.tabActiveOver, scheme],
   );
   if (focusedIndex >= 0 && focusedIndex !== backIndex) {
     setBackIndex(focusedIndex);
@@ -1098,8 +1098,8 @@ export const FloatingTabBar = () => {
       dim: 0,
       frost:
         glass.lensFrost * lensPresence.get() * grey.get() * (1 - clamp01(collapsed.get() * motion.labelFadeRate)),
-      frostClear: glass.lensFrostClear,
-      frostRadius: glass.lensFrostRadius,
+      frostClear: glass.lensFrostClear[scheme],
+      frostRadius: glass.lensFrostRadius[scheme],
       frostLeft: leftEdge.get() + pad,
       frostRight: rightEdge.get() + pad,
       frostTop: fullHeight / 2 + lensGeometry.get().translateY - (lensFullHeight * lensGeometry.get().scaleY) / 2 + pad,
