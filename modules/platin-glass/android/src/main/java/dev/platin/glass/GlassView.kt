@@ -18,15 +18,21 @@ import android.graphics.RenderNode
 import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.os.Build
+import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.annotation.SuppressLint
+import android.view.MotionEvent
 import android.view.PixelCopy
+import android.view.View
 import android.view.ViewTreeObserver
+import com.facebook.react.uimanager.ReactOverflowView
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -133,6 +139,42 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var shadow: Color = TRANSPARENT
   var plain = false
   var alphaPass = false
+  var lift = false
+    set(value) {
+      if (field == value) return
+      field = value
+      updateHost()
+    }
+  var outset = 0f
+  var presence = 1f
+  var effectTint: Color = TRANSPARENT
+  var interactive = false
+  var pressScale = 1f
+  var pressGlow = 0f
+  var pressGlowSpread = 0f
+
+  private var host: GlassBackdropView? = null
+  private var drawingLifted = false
+  private val glassNode: RenderNode? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("PlatinGlassLayer") else null
+  private val liftNode: RenderNode? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("PlatinGlassLift") else null
+  internal val clipNode: RenderNode? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("PlatinGlassClip") else null
+  private val liftMatrix = Matrix()
+  private val ancestorMatrix = Matrix()
+  private val liftClip = RectF()
+  internal val hostBounds = RectF()
+  internal var flat = true
+  private val ancestorRect = RectF()
+  private var press = 0f
+  private var pressVelocity = 0f
+  private var pressTarget = 0f
+  private var touchX = 0f
+  private var touchY = 0f
+  private var glowFollowX = 0f
+  private var glowFollowY = 0f
+  private var lastFrame = 0L
 
   private val density = resources.displayMetrics.density
   private val selfToGlobal = Matrix()
@@ -176,7 +218,25 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   private val usesShader: Boolean
     get() = shader != null && !lowRam && !plain
 
+  private val outPx: Float
+    get() = outset * density
+
+  private val layerWidth: Float
+    get() = width + outPx * 2f
+
+  private val layerHeight: Float
+    get() = height + outPx * 2f
+
+  private val activeTint: Color
+    get() =
+      if (effectTint.alpha() > 0f) {
+        Color.valueOf(effectTint.red(), effectTint.green(), effectTint.blue(), effectTint.alpha() * TINT_STRENGTH)
+      } else {
+        tint
+      }
+
   private val preDraw = ViewTreeObserver.OnPreDrawListener {
+    stepPress()
     invalidate()
     true
   }
@@ -192,8 +252,80 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     setWillNotDraw(false)
   }
 
+  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) = Unit
+
+  @SuppressLint("MissingSuperCall")
+  override fun requestLayout() = Unit
+
+  private fun updateHost() {
+    var found: GlassBackdropView? = null
+    if (lift && isAttachedToWindow) {
+      var parent = parent
+      while (parent is View) {
+        if (parent is GlassBackdropView && !parent.offscreen) {
+          found = parent
+          break
+        }
+        parent = parent.parent
+      }
+    }
+    if (found === host) return
+    host?.removeLifted(this)
+    host = found
+    found?.addLifted(this)
+    invalidate()
+  }
+
+  private val lifted: Boolean
+    get() = host != null
+
+  override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+    val handled = super.dispatchTouchEvent(event)
+    if (!interactive) return handled
+    when (event.actionMasked) {
+      MotionEvent.ACTION_DOWN -> {
+        touchX = event.x / density
+        touchY = event.y / density
+        glowFollowX = touchX
+        glowFollowY = touchY
+        pressTarget = 1f
+        invalidate()
+        return true
+      }
+      MotionEvent.ACTION_MOVE -> {
+        touchX = event.x / density
+        touchY = event.y / density
+      }
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> pressTarget = 0f
+    }
+    return handled || pressTarget > 0f
+  }
+
+  private fun stepPress() {
+    val now = SystemClock.uptimeMillis()
+    val dt = if (lastFrame == 0L) 0f else ((now - lastFrame) / 1000f).coerceAtMost(MAX_STEP)
+    lastFrame = now
+    if (dt <= 0f) return
+    val omega = 2f * Math.PI.toFloat() / PRESS_PERIOD
+    val pull = omega * omega * (pressTarget - press) - 2f * omega * pressVelocity
+    pressVelocity += pull * dt
+    press += pressVelocity * dt
+    if (kotlin.math.abs(press - pressTarget) < 1e-3f && kotlin.math.abs(pressVelocity) < 1e-2f) {
+      press = pressTarget
+      pressVelocity = 0f
+    }
+    val follow = 1f - exp(-dt / FOLLOW_TIME)
+    glowFollowX += (touchX - glowFollowX) * follow
+    glowFollowY += (touchY - glowFollowY) * follow
+    if (interactive) updateEffect()
+  }
+
+  private val currentScale: Float
+    get() = 1f + (pressScale - 1f) * press
+
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
+    updateHost()
     viewTreeObserver.addOnPreDrawListener(preDraw)
     context.contentResolver.registerContentObserver(Settings.Secure.getUriFor(HIGH_TEXT_CONTRAST), false, contrastObserver)
     reducedTransparency = readReducedTransparency()
@@ -245,6 +377,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   }
 
   override fun onDetachedFromWindow() {
+    host?.removeLifted(this)
+    host = null
     viewTreeObserver.removeOnPreDrawListener(preDraw)
     removeCallbacks(sampleRunnable)
     context.contentResolver.unregisterContentObserver(contrastObserver)
@@ -268,11 +402,11 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   private fun fillShapes(): Int {
     val source = shapes
     if (source == null || source.size < 4) {
-      val pad = inset * density
+      val pad = inset * density + outPx
       shapeBuffer[0] = pad
       shapeBuffer[1] = pad
-      shapeBuffer[2] = width - pad
-      shapeBuffer[3] = height - pad
+      shapeBuffer[2] = layerWidth - pad
+      shapeBuffer[3] = layerHeight - pad
       for (i in 4 until shapeBuffer.size) {
         shapeBuffer[i] = 0f
       }
@@ -280,7 +414,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     }
     val count = minOf(source.size / 4, MAX_SHAPES)
     for (i in 0 until count * 4) {
-      shapeBuffer[i] = quantize(source[i] * density)
+      shapeBuffer[i] = quantize(source[i] * density + outPx)
     }
     for (i in count * 4 until shapeBuffer.size) {
       shapeBuffer[i] = 0f
@@ -312,7 +446,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
 
   fun updateEffect() {
     if (!usesShader) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setRenderEffect(null)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) glassNode?.setRenderEffect(null)
       lastState.fill(Float.NaN)
       effect = null
       invalidate()
@@ -330,7 +464,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
         effect = blur(blurPx)
         state.copyInto(lastState)
       }
-      setRenderEffect(effect)
+      glassNode?.setRenderEffect(effect)
       return
     }
 
@@ -344,8 +478,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
 
     var i = 0
     state[i++] = blurPx
-    state[i++] = width.toFloat()
-    state[i++] = height.toFloat()
+    state[i++] = layerWidth
+    state[i++] = layerHeight
     shapeBuffer.copyInto(state, i)
     i += shapeBuffer.size
     state[i++] = count.toFloat()
@@ -369,10 +503,10 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = edgeSoft
     state[i++] = sharpWidth * density
     state[i++] = softWidth * density
-    state[i++] = glowX * density
-    state[i++] = glowY * density
-    state[i++] = glowSpread * density
-    state[i++] = if (opaque) 0f else glowStrength
+    state[i++] = (if (interactive) glowFollowX else glowX) * density + outPx
+    state[i++] = (if (interactive) glowFollowY else glowY) * density + outPx
+    state[i++] = (if (interactive) pressGlowSpread else glowSpread) * density
+    state[i++] = if (opaque) 0f else if (interactive) pressGlow * press else glowStrength
     state[i++] = shadowRadius * density
     state[i++] = shadowOffset * density
     state[i++] = shadowSpread * density
@@ -410,10 +544,10 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = pullTopBand * density
     state[i++] = if (opaque) 0f else rimOut * density
     state[i++] = rimOutBand * density
-    state[i++] = frostLeft * density
-    state[i++] = frostTop * density
-    state[i++] = frostRight * density
-    state[i++] = frostBottom * density
+    state[i++] = frostLeft * density + outPx
+    state[i++] = frostTop * density + outPx
+    state[i++] = frostRight * density + outPx
+    state[i++] = frostBottom * density + outPx
     state[i++] = if (opaque) 0f else frost
     state[i++] = frostClear
     state[i++] = frostRadius * density
@@ -425,11 +559,11 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = frostGain
     state[i++] = frostGamma
     state[i++] = frostChroma
-    i = putColor(i, if (opaque) fallback else tint)
+    i = putColor(i, if (opaque) fallback else activeTint)
     i = putColor(i, rim)
     putColor(i, shadow)
     if (state.contentEquals(lastState)) {
-      setRenderEffect(effect)
+      glassNode?.setRenderEffect(effect)
       return
     }
 
@@ -503,7 +637,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setFloatUniform("tone", state[u], state[u + 1], state[u + 2], state[u + 3])
     u += 4
     glassShader.setFloatUniform("frostTone", state[u], state[u + 1], state[u + 2], state[u + 3])
-    glassShader.setColorUniform("tint", if (opaque) fallback else tint)
+    glassShader.setColorUniform("tint", if (opaque) fallback else activeTint)
     glassShader.setColorUniform("rim", rim)
     glassShader.setColorUniform("shadow", shadow)
     glassShader.setFloatUniform("alphaPass", if (alphaPass) 1f else 0f)
@@ -512,19 +646,127 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     val inner = blur(blurPx)
     effect = if (inner != null) RenderEffect.createChainEffect(glass, inner) else glass
     state.copyInto(lastState)
-    setRenderEffect(effect)
+    glassNode?.setRenderEffect(effect)
   }
 
   override fun onDraw(canvas: Canvas) {
     super.onDraw(canvas)
+    if (lifted && !drawingLifted) return
+    val scale = currentScale
+    canvas.save()
+    canvas.scale(scale, scale, width * 0.5f, height * 0.5f)
+    drawGlass(canvas)
+    canvas.restore()
+  }
+
+  override fun dispatchDraw(canvas: Canvas) {
+    if (lifted && !drawingLifted) return
+    val scale = currentScale
+    canvas.save()
+    canvas.scale(scale, scale, width * 0.5f, height * 0.5f)
+    super.dispatchDraw(canvas)
+    canvas.restore()
+  }
+
+  private fun drawGlass(canvas: Canvas) {
+    if (presence <= 0f) return
     if (!usesShader) {
+      if (presence < 1f) canvas.saveLayerAlpha(-outPx, -outPx, width + outPx, height + outPx, (presence * 255).roundToInt())
+      canvas.save()
+      canvas.translate(-outPx, -outPx)
       drawPlain(canvas)
+      canvas.restore()
+      if (presence < 1f) canvas.restore()
       return
     }
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !canvas.isHardwareAccelerated) return
+    val node = glassNode ?: return
     if (!prepareBackdrop()) return
-    drawBackdrops(canvas)
-    drawWide(canvas)
+    val pad = outPx.roundToInt()
+    node.setPosition(-pad, -pad, width + pad, height + pad)
+    node.setClipToBounds(true)
+    node.setAlpha(presence)
+    val recording = node.beginRecording(width + pad * 2, height + pad * 2)
+    try {
+      recording.translate(pad.toFloat(), pad.toFloat())
+      drawBackdrops(recording)
+      drawWide(recording)
+    } finally {
+      node.endRecording()
+    }
+    canvas.drawRenderNode(node)
+  }
+
+  internal fun recordLifted(owner: GlassBackdropView, hostInverse: Matrix) {
+    val node = liftNode ?: return
+    val clip = clipNode ?: return
+    clip.setPosition(0, 0, owner.width, owner.height)
+    clip.setClipToBounds(false)
+    hostBounds.setEmpty()
+    if (!isShown || width <= 0 || height <= 0) {
+      clip.beginRecording().also { clip.endRecording() }
+      return
+    }
+    liftMatrix.reset()
+    transformMatrixToGlobal(liftMatrix)
+    liftMatrix.postConcat(hostInverse)
+    var alpha = 1f
+    var clipped = false
+    var view: View = this
+    while (view !== owner) {
+      alpha *= view.alpha
+      val parent = view.parent as? View ?: break
+      if (parent !== owner && parent is ReactOverflowView && parent.overflow != null && parent.overflow != "visible") {
+        ancestorMatrix.reset()
+        parent.transformMatrixToGlobal(ancestorMatrix)
+        ancestorMatrix.postConcat(hostInverse)
+        ancestorRect.set(0f, 0f, parent.width.toFloat(), parent.height.toFloat())
+        ancestorMatrix.mapRect(ancestorRect)
+        if (clipped) {
+          if (!liftClip.intersect(ancestorRect)) liftClip.setEmpty()
+        } else {
+          liftClip.set(ancestorRect)
+          clipped = true
+        }
+      }
+      view = parent
+    }
+    if (alpha <= 0f || (clipped && liftClip.isEmpty)) {
+      clip.beginRecording().also { clip.endRecording() }
+      return
+    }
+    hostBounds.set(0f, 0f, width.toFloat(), height.toFloat())
+    liftMatrix.mapRect(hostBounds)
+    if (clipped && !hostBounds.intersect(liftClip)) {
+      hostBounds.setEmpty()
+      clip.beginRecording().also { clip.endRecording() }
+      return
+    }
+    flat = !owner.overlapsEarlier(this)
+    node.setPosition(0, 0, width, height)
+    node.setClipToBounds(false)
+    node.setAlpha(alpha)
+    val recording = node.beginRecording(width, height)
+    drawingLifted = true
+    try {
+      val scale = currentScale
+      recording.save()
+      recording.scale(scale, scale, width * 0.5f, height * 0.5f)
+      drawGlass(recording)
+      super.dispatchDraw(recording)
+      recording.restore()
+    } finally {
+      drawingLifted = false
+      node.endRecording()
+    }
+    val out = clip.beginRecording(owner.width, owner.height)
+    try {
+      if (clipped) out.clipRect(liftClip)
+      out.concat(liftMatrix)
+      out.drawRenderNode(node)
+    } finally {
+      clip.endRecording()
+    }
   }
 
   private fun drawWide(canvas: Canvas) {
@@ -532,14 +774,17 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     val sigma = wideRadius * density * WIDE_SIGMA_RATIO
     val opaque = reducedTransparency && fallback.alpha() > 0f
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || opaque || wideMix <= 0f || sigma <= 0f) return
-    node.setPosition(0, 0, width, height)
+    val pad = outPx.roundToInt()
+    node.setPosition(-pad, -pad, width + pad, height + pad)
+    node.setClipToBounds(true)
     if (sigma != wideSigma) {
       node.setRenderEffect(RenderEffect.createBlurEffect(sigma, sigma, Shader.TileMode.CLAMP))
       wideSigma = sigma
     }
     node.setAlpha(wideMix.coerceAtMost(1f))
-    val recording = node.beginRecording(width, height)
+    val recording = node.beginRecording(width + pad * 2, height + pad * 2)
     try {
+      recording.translate(pad.toFloat(), pad.toFloat())
       drawBackdrops(recording)
     } finally {
       node.endRecording()
@@ -550,13 +795,31 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   private fun prepareBackdrop(): Boolean {
     selfToGlobal.reset()
     transformMatrixToGlobal(selfToGlobal)
+    val scale = currentScale
+    if (scale != 1f) selfToGlobal.preScale(scale, scale, width * 0.5f, height * 0.5f)
     return selfToGlobal.invert(inverse)
   }
 
   private fun drawBackdrops(canvas: Canvas) {
+    val owner = host
+    if (owner != null) {
+      drawHost(canvas, owner)
+      return
+    }
     underlay?.let { drawBackdrop(canvas, it) }
     drawBackdrop(canvas, group)
     overlay?.let { drawBackdrop(canvas, it) }
+  }
+
+  private fun drawHost(canvas: Canvas, owner: GlassBackdropView) {
+    backdropToGlobal.reset()
+    owner.transformMatrixToGlobal(backdropToGlobal)
+    backdropToSelf.set(inverse)
+    backdropToSelf.preConcat(backdropToGlobal)
+    canvas.save()
+    canvas.concat(backdropToSelf)
+    owner.drawSource(canvas, this)
+    canvas.restore()
   }
 
   private fun buildPlainPath(): Boolean {
@@ -606,7 +869,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
       val cr = clipRight * density
       val cb = clipBottom * density
       val r = min(cr - cl, cb - ct).coerceAtLeast(0f) * 0.5f
-      shapeRect.set(width * 0.5f + cl / sx, height * 0.5f + ct / sy, width * 0.5f + cr / sx, height * 0.5f + cb / sy)
+      shapeRect.set(layerWidth * 0.5f + cl / sx, layerHeight * 0.5f + ct / sy, layerWidth * 0.5f + cr / sx, layerHeight * 0.5f + cb / sy)
       clipPath.reset()
       clipPath.addRoundRect(shapeRect, r / sx, r / sy, Path.Direction.CW)
       plainPath.op(clipPath, Path.Op.INTERSECT)
@@ -633,6 +896,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
 
   private fun drawPlain(canvas: Canvas) {
     if (width <= 0 || height <= 0 || !buildPlainPath()) return
+    val tint = activeTint
     val opaque = reducedTransparency && fallback.alpha() > 0f
     val blurPx = if (opaque) 0f else blurRadius * density
     val canBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && canvas.isHardwareAccelerated && plainNode != null
@@ -648,13 +912,14 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
 
     if (canBlur && !opaque && prepareBackdrop()) {
       val node = plainNode!!
-      node.setPosition(0, 0, width, height)
+      node.setPosition(0, 0, layerWidth.roundToInt(), layerHeight.roundToInt())
       if (blurPx != plainBlur) {
         node.setRenderEffect(blur(blurPx))
         plainBlur = blurPx
       }
-      val recording = node.beginRecording(width, height)
+      val recording = node.beginRecording(layerWidth.roundToInt(), layerHeight.roundToInt())
       try {
+        recording.translate(outPx, outPx)
         drawBackdrops(recording)
       } finally {
         node.endRecording()
@@ -663,7 +928,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
       canvas.clipPath(plainPath)
       canvas.drawRenderNode(node)
       canvas.restore()
-      fillPaint.color = tint.toArgb()
+      fillPaint.color = activeTint.toArgb()
     } else {
       fillPaint.color = (if (fallback.alpha() > 0f) fallback else tint).toArgb()
     }
@@ -679,7 +944,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     if (glowStrength > 0f && !opaque && glowSpread > 0f) {
       val spread = glowSpread * density * GLOW_REACH
       val peak = Color.argb(glowStrength.coerceIn(0f, 1f), 1f, 1f, 1f)
-      glowPaint.shader = RadialGradient(glowX * density, glowY * density, spread, peak, Color.TRANSPARENT, Shader.TileMode.CLAMP)
+      glowPaint.shader = RadialGradient(glowX * density + outPx, glowY * density + outPx, spread, peak, Color.TRANSPARENT, Shader.TileMode.CLAMP)
       canvas.drawPath(plainPath, glowPaint)
     }
 
@@ -705,7 +970,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
 
   private fun drawBackdrop(canvas: Canvas, name: String) {
     val backdrop = GlassRegistry.backdrop(name) ?: return
-    val node = backdrop.node ?: return
+    val node = backdrop.visibleNode ?: return
     if (!node.hasDisplayList()) return
     backdropToGlobal.reset()
     backdrop.transformMatrixToGlobal(backdropToGlobal)
@@ -741,5 +1006,9 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     const val SAMPLE_INSET = 6f
     const val SAMPLE_WIDTH = 8f
     const val SAMPLE_STEP = 0.015f
+    const val TINT_STRENGTH = 0.5f
+    const val PRESS_PERIOD = 0.32f
+    const val FOLLOW_TIME = 0.05f
+    const val MAX_STEP = 0.05f
   }
 }

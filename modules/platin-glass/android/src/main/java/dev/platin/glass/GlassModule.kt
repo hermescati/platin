@@ -127,6 +127,17 @@ class GlassModule : Module() {
       Prop("shadow") { view: GlassView, value: Color? -> view.shadow = value ?: TRANSPARENT }
       Prop("plain") { view: GlassView, value: Boolean? -> view.plain = value ?: false }
       Prop("alphaPass") { view: GlassView, value: Boolean? -> view.alphaPass = value ?: false }
+      Prop("lift") { view: GlassView, value: Boolean? -> view.lift = value ?: false }
+      Prop("outset") { view: GlassView, value: Float? -> view.outset = value ?: 0f }
+      Prop("presence") { view: GlassView, value: Float? ->
+        view.presence = value ?: 1f
+        view.invalidate()
+      }
+      Prop("glassTint") { view: GlassView, value: Color? -> view.effectTint = value ?: TRANSPARENT }
+      Prop("interactive") { view: GlassView, value: Boolean? -> view.interactive = value ?: false }
+      Prop("pressScale") { view: GlassView, value: Float? -> view.pressScale = value ?: 1f }
+      Prop("pressGlow") { view: GlassView, value: Float? -> view.pressGlow = value ?: 0f }
+      Prop("pressGlowSpread") { view: GlassView, value: Float? -> view.pressGlowSpread = value ?: 0f }
 
       OnViewDidUpdateProps { view: GlassView ->
         view.updateEffect()
