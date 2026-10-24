@@ -187,6 +187,7 @@ export interface Palette {
     pressLift: string;
     lensTint: string;
     lensGlideTint: string;
+    lensHeldTint: string;
     lensGlideRim: string;
     tabAccent: string;
     tabActive: string;
@@ -256,6 +257,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       pressLift: 'rgba(255, 255, 255, 0.038)',
       lensTint: 'rgba(0, 0, 0, 0.2)',
       lensGlideTint: 'rgba(0, 0, 0, 0.04)',
+      lensHeldTint: 'rgba(0, 0, 0, 0)',
       lensGlideRim: 'rgba(0, 0, 0, 0.55)',
       tabAccent: '#F8A154',
       tabActive: '#FFDC8C',
@@ -325,6 +327,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       pressLift: 'rgba(255, 255, 255, 0.25)',
       lensTint: 'rgba(0, 0, 0, 0.025)',
       lensGlideTint: 'rgba(0, 0, 0, 0.025)',
+      lensHeldTint: 'rgba(0, 0, 0, 0)',
       lensGlideRim: 'rgba(0, 0, 0, 0.16)',
       tabAccent: a[700],
       tabActive: '#AF4F00',

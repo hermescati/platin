@@ -308,6 +308,7 @@ export const FloatingTabBar = () => {
   const slideShape = useDerivedValue(() => tapSlide.get() * (1 - tapStay.get()) * motion.tapSlide.canal);
   const shine = useDerivedValue(() => lift.get() * (1 - slideShape.get()));
   const held = useDerivedValue(() => lerp(1, barPress.get(), tapStay.get()));
+  const holding = useDerivedValue(() => tapStay.get() * barPress.get());
   const squishVelocity = useSharedValue(0);
   const wallSide = useSharedValue(0);
   const approachSpeed = useSharedValue(0);
@@ -1278,7 +1279,7 @@ export const FloatingTabBar = () => {
       ellipse: Math.max(
         canal,
         motion.tapLens.ellipse * lift.get() * (1 - held.get()),
-        motion.tapLens.heldEllipse * lift.get() * held.get(),
+        motion.tapLens.heldEllipse * lift.get() * holding.get(),
       ),
       clipLeft: -motion.canal.overflow - centerX,
       clipTop: -motion.canal.overflow - centerY,
@@ -1336,7 +1337,11 @@ export const FloatingTabBar = () => {
     const reveal = lensOut.get();
     const optics = lensOptics.get();
     const glideColour = lerp(1, glass.lensGlideColour[scheme], glide.get());
-    const tint = interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensTint]);
+    const tint = interpolateColor(
+      reveal,
+      [0, 1],
+      [color.chrome.lensTintEarly, interpolateColor(holding.get(), [0, 1], [color.chrome.lensTint, color.chrome.lensHeldTint])],
+    );
     return {
       ...optics,
       dispersion: optics.dispersion * glideColour,
