@@ -668,7 +668,7 @@ export const FloatingTabBar = () => {
             ? motion.switchTravel.squishKick * glideSpan.get()
             : Math.min(approachSpeed.get(), motion.squish.speedCap) *
               motion.squish.impact *
-              lerp(1, motion.tapSlide.impact, tapSlide.get())),
+              (sliding.get() ? lerp(1, motion.tapSlide.impact, tapSlide.get()) : motion.squish.dragImpact)),
       );
     }
     atEnd.set(endReached);
@@ -871,6 +871,9 @@ export const FloatingTabBar = () => {
         scaleX += (scaleY - capped) * motion.switchTravel.heightToWidth * (lensFullHeight / fullWidth);
         scaleY = capped;
       }
+    }
+    if (!gliding.get() && !sliding.get()) {
+      scaleY *= 1 + squish.get() * motion.squish.dragHeight;
     }
     const land = landing.get() * tapStay.get() * tapSlide.get();
     scaleX *= 1 + land * motion.tapLanding.wide;
@@ -1344,8 +1347,12 @@ export const FloatingTabBar = () => {
     );
     return {
       ...optics,
-      dispersion: optics.dispersion * glideColour,
-      edgeSharp: lerp(glass.lensEdgeShade[scheme], glass.lensGlideEdge[scheme], glide.get()),
+      dispersion: optics.dispersion * glideColour * lerp(1, glass.lensHeldDispersion[scheme], holding.get()),
+      edgeSharp: lerp(
+        lerp(glass.lensEdgeShade[scheme], glass.lensHeldEdge[scheme], holding.get()),
+        glass.lensGlideEdge[scheme],
+        glide.get(),
+      ),
       sampleMaxX: Math.max(sampleMaxX, 1),
       pinch: glass.lensPinch * (1 - deflate.get()) * pinchScale * reveal,
       pinchLeft: glass.lensPinch * clamp01(1 - position / glass.lensPinchSideReach) * pinchScale * reveal,
@@ -1355,9 +1362,19 @@ export const FloatingTabBar = () => {
       rim: interpolateColor(
         reveal,
         [0, 1],
-        [color.chrome.lensRimEarly, glide.get() ? color.chrome.lensGlideRim : color.chrome.lensRim],
+        [
+          color.chrome.lensRimEarly,
+          glide.get()
+            ? color.chrome.lensGlideRim
+            : interpolateColor(holding.get(), [0, 1], [color.chrome.lensRim, color.chrome.lensHeldRim]),
+        ],
       ),
       rimPrism: glass.lensRimPrism[scheme] * reveal * glideColour * dragColour.get(),
+      edgeAxis: holding.get(),
+      rimWidth: lerp(glass.lensRimWidth[scheme], glass.lensHeldRimWidth[scheme], holding.get()),
+      prismAxis: holding.get(),
+      prismShift: glass.lensHeldPrismShift[scheme] * holding.get(),
+      pinchSpread: lerp(glass.lensPinchSpread, glass.lensHeldPinchSpread[scheme], holding.get()),
       shadow: interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensShadow]),
       tint: glide.get()
         ? interpolateColor(reveal, [0, 1], [color.chrome.lensTintEarly, color.chrome.lensGlideTint])
@@ -1504,11 +1521,9 @@ export const FloatingTabBar = () => {
             dispersion={glass.lensDispersion}
             magnify={glass.lensMagnify}
             pinchWidth={glass.lensPinchWidth}
-            pinchSpread={glass.lensPinchSpread}
             sharpWidth={glass.lensShadeWidth}
             lightAngle={glass.lightAngle}
             rimSide={glass.lensRimSide[scheme]}
-            rimWidth={glass.lensRimWidth[scheme]}
             shadowRadius={glass.lensShadowRadius}
             shadowOffset={glass.lensShadowOffset}
           />

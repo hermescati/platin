@@ -78,6 +78,9 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var rimWidth = 2f
   var rimOutside = false
   var rimSide = 1f
+  var edgeAxis = 0f
+  var prismAxis = 0f
+  var prismShift = 0f
   var insetShade = 0f
   var insetOffset = 0f
   var insetBlur = 0f
@@ -517,6 +520,9 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = rimWidth
     state[i++] = if (rimOutside) 1f else 0f
     state[i++] = rimSide
+    state[i++] = edgeAxis
+    state[i++] = if (opaque) 0f else prismAxis
+    state[i++] = if (opaque) 0f else prismShift * density
     state[i++] = if (opaque) 0f else insetShade
     state[i++] = insetOffset * density
     state[i++] = insetBlur * density
@@ -605,6 +611,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setFloatUniform("rimWidth", state[u++])
     glassShader.setFloatUniform("rimOutside", state[u++])
     glassShader.setFloatUniform("rimSide", state[u++])
+    glassShader.setFloatUniform("axis", state[u], state[u + 1], state[u + 2])
+    u += 3
     glassShader.setFloatUniform("insetShade", state[u++])
     glassShader.setFloatUniform("insetOffset", state[u++])
     glassShader.setFloatUniform("insetBlur", state[u++])
@@ -1000,7 +1008,7 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     val EDGE_STOPS = floatArrayOf(0f, 0.3f, 0.7f, 1f)
     const val ADAPTIVE_LIFT = 0.14f
     const val ADAPTIVE_DARKEN = 0.22f
-    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 36
+    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 59 + 36
     const val SAMPLE_SIZE = 8
     const val SAMPLE_INTERVAL_MS = 16L
     const val SAMPLE_INSET = 6f

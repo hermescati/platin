@@ -74,6 +74,9 @@ class GlassModule : Module() {
       Prop("rimWidth") { view: GlassView, value: Float? -> view.rimWidth = value ?: 2f }
       Prop("rimOutside") { view: GlassView, value: Boolean? -> view.rimOutside = value ?: false }
       Prop("rimSide") { view: GlassView, value: Float? -> view.rimSide = value ?: 1f }
+      Prop("edgeAxis") { view: GlassView, value: Float? -> view.edgeAxis = value ?: 0f }
+      Prop("prismAxis") { view: GlassView, value: Float? -> view.prismAxis = value ?: 0f }
+      Prop("prismShift") { view: GlassView, value: Float? -> view.prismShift = value ?: 0f }
       Prop("insetShade") { view: GlassView, value: Float? -> view.insetShade = value ?: 0f }
       Prop("insetOffset") { view: GlassView, value: Float? -> view.insetOffset = value ?: 0f }
       Prop("insetBlur") { view: GlassView, value: Float? -> view.insetBlur = value ?: 0f }

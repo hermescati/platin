@@ -39,6 +39,7 @@ uniform float rimPrism;
 uniform float rimWidth;
 uniform float rimOutside;
 uniform float rimSide;
+uniform float3 axis;
 uniform float insetShade;
 uniform float insetOffset;
 uniform float insetBlur;
@@ -214,7 +215,8 @@ half4 main(float2 coord) {
   float alpha = centreSample.a;
   float spread = dispersion * slope * smoothstep(0.02, 0.12, luma(centre));
   float pinchSplit = length(pinchVec) * pinchSpread;
-  if (spread > 0.01 || pinchSplit > 0.05) {
+  float shift = axis.z * min((length(offset) + length(pinchVec)) / max(refraction, 1.0), 2.0) * (0.15 + 1.85 * n.x * n.x);
+  if (spread > 0.01 || pinchSplit > 0.05 || shift > 0.05) {
     float3 sum = float3(0.0);
     float3 weight = float3(0.0);
     float alphaSum = 0.0;
@@ -224,7 +226,7 @@ half4 main(float2 coord) {
       float3 w = float3(1.0 - s, 1.0 - abs(2.0 * s - 1.0), s);
       w = w * w;
       float k = 2.0 * s - 1.0;
-      float2 uv = clamp(base + offset * (1.0 - spread * k) - pinchVec * (pinchSpread * k), lo, hi);
+      float2 uv = clamp(base + offset * (1.0 - spread * k) - pinchVec * (pinchSpread * k) + float2(0.0, shift * k), lo, hi);
       float4 sampled = content.eval(uv);
       sum += sampled.rgb * w;
       weight += w;
@@ -320,7 +322,7 @@ half4 main(float2 coord) {
     float shifted = max(-field(coord - float2(0.0, insetOffset)), 0.0);
     col -= float3(insetShade * (1.0 - smoothstep(0.0, max(insetBlur, 1.0), shifted)));
   }
-  float facingY = n.y * n.y;
+  float facingY = mix(n.y * n.y, n.x * n.x, axis.x);
   if (edgeSharp < 0.0) {
     float shadeDepth = max(depth - 1.5, 0.0);
     col += float3((edgeSharp * exp(-shadeDepth / max(sharpWidth, 0.1)) + edgeSoft * exp(-depth / max(softWidth, 0.1))) * facingY);
@@ -341,7 +343,7 @@ half4 main(float2 coord) {
     float hue = 0.33 + depth * 0.09;
     float3 spectrum = 0.5 + 0.5 * cos(6.2832 * (hue + float3(0.0, 0.33, 0.67)));
     float diagonal = 4.0 * n.x * n.x * n.y * n.y;
-    float band = exp(-depth / 3.0) * cover * diagonal * diagonal;
+    float band = exp(-depth / 3.0) * cover * mix(diagonal * diagonal, n.y * n.y, axis.y);
     col += (spectrum - 0.5) * band * rimPrism;
   }
   col = mix(col, rimColor.rgb, rimColor.a * hair * mix(1.0, rimSide, n.x * n.x));

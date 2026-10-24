@@ -43,6 +43,9 @@ export interface NativeGlassViewProps extends ViewProps {
   rimWidth?: number;
   rimOutside?: boolean;
   rimSide?: number;
+  edgeAxis?: number;
+  prismAxis?: number;
+  prismShift?: number;
   insetShade?: number;
   insetOffset?: number;
   insetBlur?: number;

@@ -188,6 +188,7 @@ export interface Palette {
     lensTint: string;
     lensGlideTint: string;
     lensHeldTint: string;
+    lensHeldRim: string;
     lensGlideRim: string;
     tabAccent: string;
     tabActive: string;
@@ -258,6 +259,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lensTint: 'rgba(0, 0, 0, 0.2)',
       lensGlideTint: 'rgba(0, 0, 0, 0.04)',
       lensHeldTint: 'rgba(0, 0, 0, 0)',
+      lensHeldRim: 'rgba(26, 27, 27, 0.9)',
       lensGlideRim: 'rgba(0, 0, 0, 0.55)',
       tabAccent: '#F8A154',
       tabActive: '#FFDC8C',
@@ -328,6 +330,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       lensTint: 'rgba(0, 0, 0, 0.025)',
       lensGlideTint: 'rgba(0, 0, 0, 0.025)',
       lensHeldTint: 'rgba(0, 0, 0, 0)',
+      lensHeldRim: 'rgba(0, 0, 0, 0.16)',
       lensGlideRim: 'rgba(0, 0, 0, 0.16)',
       tabAccent: a[700],
       tabActive: '#AF4F00',
@@ -498,10 +501,15 @@ export const glass = {
   lensSpecular: 0.22,
   lensEdgeShade: { dark: -0.45, light: -0.04 },
   lensGlideEdge: { dark: 0.12, light: -0.04 },
+  lensHeldEdge: { dark: -0.08, light: -0.04 },
+  lensHeldDispersion: { dark: 0.2, light: 1 },
+  lensHeldPrismShift: { dark: 6, light: 0 },
+  lensHeldPinchSpread: { dark: 0, light: 0.26 },
   lensGlideColour: { dark: 0.35, light: 1 },
   lensGlidePinch: { dark: 0.3, light: 1 },
   lensRimSide: { dark: 1, light: 3 },
-  lensRimWidth: { dark: 2, light: 1.25 },
+  lensRimWidth: { dark: 1, light: 1.25 },
+  lensHeldRimWidth: { dark: 2, light: 1.25 },
   lensShadeWidth: 1,
   liftBlend: 12,
   meltBlend: 12,
@@ -565,6 +573,8 @@ export const motion = {
     period: 0.5,
     damping: 0.36,
     impact: 0.24,
+    dragImpact: 1.6,
+    dragHeight: 0.6,
     speedCap: 12,
     bulge: 1.1,
     barBulge: 14,
