@@ -1275,7 +1275,11 @@ export const FloatingTabBar = () => {
       magnify: glass.lensMagnify * optics * travel * reveal,
       rimOut: glass.lensRimOut.amount * lift.get() * reveal,
       dispersion: glass.lensDispersion * bendScale * reveal,
-      ellipse: Math.max(canal, motion.tapLens.ellipse * lift.get() * (1 - held.get())),
+      ellipse: Math.max(
+        canal,
+        motion.tapLens.ellipse * lift.get() * (1 - held.get()),
+        motion.tapLens.heldEllipse * lift.get() * held.get(),
+      ),
       clipLeft: -motion.canal.overflow - centerX,
       clipTop: -motion.canal.overflow - centerY,
       clipRight: barWidth.get() + motion.canal.overflow - centerX,

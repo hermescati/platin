@@ -633,6 +633,7 @@ export const motion = {
     iconCoverRamp: 20,
     coverLift: 0.05,
     ellipse: 0.35,
+    heldEllipse: 0.35,
     revealOverhang: 5.5,
     dip: 0.3,
     dipFrom: 0.5,
