@@ -91,8 +91,13 @@ class GlassModule : Module() {
       Prop("pullBand") { view: GlassView, value: Float? -> view.pullBand = value ?: 1f }
       Prop("pullTop") { view: GlassView, value: Float? -> view.pullTop = value ?: 0f }
       Prop("pullTopBand") { view: GlassView, value: Float? -> view.pullTopBand = value ?: 1f }
+      Prop("rimOut") { view: GlassView, value: Float? -> view.rimOut = value ?: 0f }
+      Prop("rimOutBand") { view: GlassView, value: Float? -> view.rimOutBand = value ?: 1f }
       Prop("wideRadius") { view: GlassView, value: Float? -> view.wideRadius = value ?: 0f }
-      Prop("wideMix") { view: GlassView, value: Float? -> view.wideMix = value ?: 0f }
+      Prop("wideMix") { view: GlassView, value: Float? ->
+        view.wideMix = value ?: 0f
+        view.invalidate()
+      }
       Prop("frost") { view: GlassView, value: Float? -> view.frost = value ?: 0f }
       Prop("frostClear") { view: GlassView, value: Float? -> view.frostClear = value ?: 0f }
       Prop("frostRadius") { view: GlassView, value: Float? -> view.frostRadius = value ?: 0f }

@@ -50,6 +50,7 @@ uniform float topBend;
 uniform float topDepth;
 uniform float2 edgeY;
 uniform float2 edgeTop;
+uniform float2 rimOut;
 uniform float4 frostRect;
 uniform float frost;
 uniform float frostClear;
@@ -193,6 +194,10 @@ half4 main(float2 coord) {
   }
   base += pinchVec;
   float2 offset = n * float2(direction, directionY) * (slope * refraction * mix(1.0, topBend, clamp(-n.y, 0.0, 1.0)));
+  if (rimOut.x > 0.0) {
+    float rimReach = 1.0 - clamp(depth / max(rimOut.y, 1.0), 0.0, 1.0);
+    offset.x += n.x * rimOut.x * rimReach * rimReach;
+  }
   if (edgeTop.x != 0.0 && n.y < 0.0) {
     float reachTop = 1.0 - clamp(depth / max(edgeTop.y, 1.0), 0.0, 1.0);
     offset.y -= edgeTop.x * pow(reachTop, 1.7) * n.y;

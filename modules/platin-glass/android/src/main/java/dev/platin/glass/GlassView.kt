@@ -88,6 +88,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
   var pullBand = 1f
   var pullTop = 0f
   var pullTopBand = 1f
+  var rimOut = 0f
+  var rimOutBand = 1f
   var wideRadius = 0f
   var wideMix = 0f
   var frost = 0f
@@ -406,6 +408,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     state[i++] = pullBand * density
     state[i++] = if (opaque) 0f else pullTop * density
     state[i++] = pullTopBand * density
+    state[i++] = if (opaque) 0f else rimOut * density
+    state[i++] = rimOutBand * density
     state[i++] = frostLeft * density
     state[i++] = frostTop * density
     state[i++] = frostRight * density
@@ -488,6 +492,8 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     glassShader.setFloatUniform("edgeY", state[u], state[u + 1])
     u += 2
     glassShader.setFloatUniform("edgeTop", state[u], state[u + 1])
+    u += 2
+    glassShader.setFloatUniform("rimOut", state[u], state[u + 1])
     u += 2
     glassShader.setFloatUniform("frostRect", state[u], state[u + 1], state[u + 2], state[u + 3])
     u += 4
@@ -729,9 +735,9 @@ class GlassView(context: Context, appContext: AppContext) : ExpoView(context, ap
     val EDGE_STOPS = floatArrayOf(0f, 0.3f, 0.7f, 1f)
     const val ADAPTIVE_LIFT = 0.14f
     const val ADAPTIVE_DARKEN = 0.22f
-    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 34
+    const val STATE_SIZE = 3 + MAX_SHAPES * 4 + 56 + 36
     const val SAMPLE_SIZE = 8
-    const val SAMPLE_INTERVAL_MS = 150L
+    const val SAMPLE_INTERVAL_MS = 16L
     const val SAMPLE_INSET = 6f
     const val SAMPLE_WIDTH = 8f
     const val SAMPLE_STEP = 0.015f

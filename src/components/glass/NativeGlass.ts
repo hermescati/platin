@@ -60,6 +60,8 @@ export interface NativeGlassViewProps extends ViewProps {
   pullBand?: number;
   pullTop?: number;
   pullTopBand?: number;
+  rimOut?: number;
+  rimOutBand?: number;
   wideRadius?: number;
   wideMix?: number;
   frost?: number;
@@ -74,7 +76,7 @@ export interface NativeGlassViewProps extends ViewProps {
   frostGamma?: number;
   frostChroma?: number;
   sampleBackdrop?: boolean;
-  onBackdropLuma?: (event: { nativeEvent: { luma: number } }) => void;
+  onBackdropLuma?: (event: { luma: number }) => void;
   frostLeft?: number;
   frostTop?: number;
   frostRight?: number;
