@@ -1,7 +1,7 @@
-import { NativeTabs } from 'expo-router/native-tabs';
+import { NativeTabs } from 'expo-lucent';
 
+import { primaryTabs, searchTab } from '@/components/navigation/tabs';
 import { SearchQueryProvider } from '@/components/search/SearchQuery';
-import { primaryTabs, searchTab } from '@/components/tab-bar/tabs';
 import { useTheme } from '@/theme/useTheme';
 
 const TabsLayout = () => {
@@ -16,10 +16,7 @@ const TabsLayout = () => {
             <NativeTabs.Trigger.Icon src={tab.image} renderingMode="template" />
           </NativeTabs.Trigger>
         ))}
-        <NativeTabs.Trigger
-          name={searchTab.name}
-          role="search"
-          unstable_nativeProps={{ ios: { role: 'search', automaticallyActivatesSearch: true } }}>
+        <NativeTabs.Trigger name={searchTab.name} role="search">
           <NativeTabs.Trigger.Label>{searchTab.label}</NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon src={searchTab.image} renderingMode="template" />
         </NativeTabs.Trigger>

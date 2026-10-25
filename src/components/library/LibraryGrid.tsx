@@ -1,10 +1,8 @@
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { TabScrollMarker, useTabBarInset, useTabBarScroll } from 'expo-lucent';
 
 import { GameCard } from '@/components/library/GameCard';
-import { TabScrollMarker } from '@/components/tab-bar/TabScrollMarker';
-import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
-import { useTabBarScroll } from '@/components/tab-bar/useTabBarScroll';
 import type { LibraryGame } from '@/db/types';
 import { layout, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';

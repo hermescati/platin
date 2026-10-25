@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useTabBarInset } from 'expo-lucent';
 
 import { activityStatusLabels } from '@/components/library/labels';
 import { SearchResultRow } from '@/components/search/SearchResultRow';
 import { useCatalogSearch } from '@/components/search/useCatalogSearch';
-import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
 import { Text } from '@/components/ui/Text';
 import { useLibrary } from '@/db/library';
 import type { CatalogGame } from '@/lib/catalog';

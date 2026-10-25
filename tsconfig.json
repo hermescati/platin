@@ -8,12 +8,6 @@
       ],
       "@/assets/*": [
         "./assets/*"
-      ],
-      "platin-glass": [
-        "./modules/platin-glass/src"
-      ],
-      "platin-glass/*": [
-        "./modules/platin-glass/src/*"
       ]
     }
   },

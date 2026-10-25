@@ -1,8 +1,7 @@
 import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useTabBarInset, useTabBarScroll } from 'expo-lucent';
 
-import { useTabBarInset } from '@/components/tab-bar/useTabBarInset';
-import { useTabBarScroll } from '@/components/tab-bar/useTabBarScroll';
 import { Text } from '@/components/ui/Text';
 import { space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
