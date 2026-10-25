@@ -23,7 +23,7 @@ import { AnimatedNativeGlassBlur, AnimatedNativeGlassView, NativeGlassBackdrop }
 import { forcePlainGlass } from '@/components/glass/plainGlass';
 import { useGlassStyle } from '@/components/glass/useGlassStyle';
 import { Icon } from '@/components/icon/Icon';
-import { useKeyboardHeight } from '@/components/keyboard/useKeyboardHeight';
+import { useKeyboardHeight, useKeyboardProgress } from '@/components/keyboard/useKeyboardHeight';
 import { useSearchQuery } from '@/components/search/SearchQuery';
 import { SearchMode } from '@/components/tab-bar/SearchMode';
 import { setTabBarCollapsed, useTabBarCollapse } from '@/components/tab-bar/TabBarCollapse';
@@ -236,6 +236,7 @@ export const FloatingTabBar = () => {
   const searchFocused = getTrigger(searchTab.name)?.isFocused ?? false;
   const { setQuery } = useSearchQuery();
   const keyboardHeight = useKeyboardHeight();
+  const keyboardProgress = useKeyboardProgress();
   const [backIndex, setBackIndex] = useState(Math.max(focusedIndex, 0));
   if (focusedIndex >= 0 && focusedIndex !== backIndex) {
     setBackIndex(focusedIndex);
@@ -262,11 +263,19 @@ export const FloatingTabBar = () => {
   const lensPresence = useSharedValue(focusedIndex >= 0 ? 1 : 0);
   const searchPress = useGlassPress();
   const backPress = useGlassPress();
+  const backLight = useSharedValue(0);
+  const backDragging = useSharedValue(false);
   const glassStyle = useGlassStyle();
   const nudge = useSharedValue(0);
   const pressSquash = useSharedValue(0);
   const searchMode = useSharedValue(searchFocused ? 1 : 0);
   const modeTarget = useSharedValue(searchFocused ? 1 : 0);
+  const searchDip = useSharedValue(0);
+  const searchKeyboard = useDerivedValue(() => (modeTarget.get() === 1 || searchMode.get() > 0 ? 1 : 0));
+  const barLift = useDerivedValue(
+    () => Math.min(0, keyboardHeight.get() + bottom - space[8]) * searchKeyboard.get(),
+  );
+  const searchRaise = useDerivedValue(() => keyboardProgress.get() * searchKeyboard.get());
   const searchBump = useSharedValue(0);
   const backBump = useSharedValue(0);
   const searchPop = useSharedValue(searchFocused ? 1 : 0);
@@ -379,18 +388,27 @@ export const FloatingTabBar = () => {
       if (open) {
         searchBump.set(withSpring(0, motion.springs.searchBumpOut));
         searchMode.set(
-          withSpring(1, {
-            ...motion.springs.searchOpen,
-            velocity: motion.searchMorph.openVelocity,
-          }),
+          withDelay(
+            motion.searchMorph.delay,
+            withSpring(1, {
+              ...motion.springs.searchOpen,
+              velocity: motion.searchMorph.openVelocity,
+            }),
+          ),
         );
         searchPop.set(withDelay(motion.searchPop.delay, withSpring(1, motion.springs.searchPop)));
       } else {
-        searchPop.set(withSpring(0, motion.springs.searchAbsorb));
-        searchMode.set(withSpring(0, motion.springs.searchMorph));
+        const typing = keyboardProgress.get() > 0.5;
+        const delay = typing ? 0 : motion.searchClose.delay;
+        searchPop.set(
+          withDelay(delay, withSpring(0, typing ? motion.springs.searchKeyboardAbsorb : motion.springs.searchAbsorb)),
+        );
+        searchMode.set(
+          withDelay(delay, withSpring(0, typing ? motion.springs.searchKeyboardMorph : motion.springs.searchMorph)),
+        );
       }
     },
-    [modeTarget, searchMode, searchPop, searchBump],
+    [modeTarget, searchMode, searchPop, searchBump, keyboardProgress],
   );
 
   useAnimatedReaction(
@@ -449,6 +467,12 @@ export const FloatingTabBar = () => {
     searchPress.press.set(withSpring(0, motion.springs.closeFlash));
     setQuery('');
     Keyboard.dismiss();
+    backLight.set(0);
+    leaveSearch();
+  };
+
+  const backSearch = () => {
+    backLight.set(1);
     leaveSearch();
   };
 
@@ -464,6 +488,192 @@ export const FloatingTabBar = () => {
     landing.set(withSequence(withSpring(amount, motion.springs.landIn), withSpring(0, motion.springs.landOut)));
   };
 
+  const pressBegin = (x: number) => {
+    'worklet';
+    const index = Math.round(positionAt(x));
+    if (index !== focused.get()) {
+      scheduleOnRN(tick);
+    }
+    dragIndex.set(index);
+    moved.set(false);
+    const switching = index !== focused.get();
+    tapStay.set(switching ? 0 : 1);
+    pressedAt.set(Date.now());
+    pressing.set(true);
+    dripOnArrival.set(false);
+    settleFill.set(withSpring(0, motion.springs.lift));
+    settleOnArrival.set(false);
+    tapSlide.set(1);
+    tapSlide.set(withDelay(motion.tapSlide.holdDelay, withSpring(0, motion.springs.lift)));
+    landing.set(switching ? withSpring(0, motion.springs.lift) : withSpring(1, motion.springs.landIn));
+    barPress.set(withSpring(1, motion.springs.barPressIn));
+    barGrowth.set(withSpring(motion.barGrow.held, motion.springs.barGrowIn));
+    dragRelease.set(0);
+    settleAt.set(-1);
+    lensPresence.set(withSpring(1, motion.springs.lift));
+    pressSquash.set(withSequence(withSpring(1, motion.springs.track), withSpring(0, motion.springs.edgeSettle)));
+    jellyVelocity.set(jellyVelocity.get() + motion.jelly.pressKick * (switching ? motion.switchTravel.pressKick : 1));
+    if (switching) {
+      lift.set(withSpring(1, motion.springs.lift));
+    } else {
+      tapGlow.set(withSpring(1, motion.springs.tapRise));
+      const dipping = lift.get() > motion.tapLens.dipFrom;
+      const rise = withSpring(1, motion.springs.tapLift);
+      tapDipping.set(dipping);
+      lift.set(dipping ? withSequence(withSpring(motion.tapLens.dip, motion.springs.tapDip), rise) : rise);
+    }
+    gliding.set(switching);
+    glideTo.set(index);
+    glideSpan.set(Math.abs(index - lensPosition.get()));
+    glideFrom.set(lensPosition.get());
+    if (switching) {
+      const distance = index - lensPosition.get();
+      const extra = Math.max(0, Math.abs(distance) - 1);
+      const travel = withSpring(index, {
+        duration: motion.switchTravel.duration + motion.switchTravel.perSlot * extra,
+        dampingRatio: motion.switchTravel.dampingRatio,
+        velocity: Math.sign(distance) * (motion.switchTravel.kick + motion.switchTravel.kickPerSlot * extra),
+      });
+      lensPosition.set(motion.switchTravel.delay > 0 ? withDelay(motion.switchTravel.delay, travel) : travel);
+    } else {
+      lensPosition.set(withSpring(index, motion.springs.lens));
+    }
+    dragOrigin.set(index);
+    if (!switching) {
+      const tabCenter = barWidth.get() / 2 + pillShiftX.get() + (index - middleIndex) * itemWidth.get();
+      pokeSide.set(clamp01((x - tabCenter) / Math.max(itemWidth.get(), 1) + 0.5) * 2 - 1);
+      poke.set(
+        withSequence(
+          withSpring(motion.poke.tap, motion.springs.pokeIn),
+          withDelay(motion.poke.holdDelay, withSpring(1, motion.springs.pokeHold)),
+        ),
+      );
+    }
+  };
+
+  const pressUpdate = (x: number, translationX: number) => {
+    'worklet';
+    if (!moved.get() && Math.abs(translationX) < motion.dragThreshold) {
+      return;
+    }
+    moved.set(true);
+    tapGlow.set(0);
+    poke.set(withSpring(0, motion.springs.pokeHold));
+    gliding.set(false);
+    tapSlide.set(withSpring(0, motion.springs.lift));
+    sliding.set(false);
+    settleOnArrival.set(false);
+    barPress.set(withSpring(1, motion.springs.barPressIn));
+    barGrowth.set(withSpring(motion.barGrow.held, motion.springs.barGrowIn));
+    const width = barWidth.get();
+    const inner =
+      x < inlinePad ? x - inlinePad : x > width - inlinePad ? x - (width - inlinePad) : 0;
+    const rubber = Math.sign(inner) * motion.nudgeMax * (1 - 1 / (1 + Math.abs(inner) / motion.nudgeRange));
+    const follow = width > 0 ? ((x - width / 2) / (width / 2)) * motion.nudgeFollow : 0;
+    nudge.set(withSpring(rubber + follow, motion.springs.track));
+    const position = positionAt(x);
+    const lastCenter = barWidth.get() - inlinePad - fullItemWidth.get() / 2;
+    const pushTarget = clamp01((x - lastCenter) / Math.max(fullItemWidth.get() / 2, 1));
+    push.set(withSpring(pushTarget, motion.springs.track));
+    lensPosition.set(withSpring(position, motion.springs.track));
+    const index = Math.round(position);
+    if (index !== dragIndex.get()) {
+      dragIndex.set(index);
+      scheduleOnRN(tick);
+    }
+  };
+
+  const pressEnd = (canceled: boolean) => {
+    'worklet';
+    pressing.set(false);
+    poke.set(withSpring(0, motion.springs.pokeOut));
+    const committed = !canceled || !moved.get();
+    const pressTime = Date.now() - pressedAt.get();
+    const linger = gliding.get() ? motion.switchTravel.lingerPerSlot * Math.max(0, glideSpan.get() - 1) : 0;
+    settleFill.set(
+      withDelay(
+        Math.max(0, motion.switchTravel.fillDelay + linger - pressTime),
+        withSpring(1, motion.springs.settleFill),
+      ),
+    );
+    const index = committed ? dragIndex.get() : focused.get();
+    dragIndex.set(-1);
+    push.set(withSpring(0, motion.springs.release));
+    nudge.set(withSpring(0, motion.springs.edgeSettle));
+    const settle = withSpring(0, motion.springs.release);
+    const quick = !moved.get() && tapSlide.get() > 0.5;
+    const tapping = quick && sliding.get();
+    const pressed = !moved.get() && !quick && tapStay.get() === 1;
+    const pressSwitch = !moved.get() && !quick && gliding.get();
+    if (quick || pressSwitch) {
+      tapSlide.set(withSpring(1, motion.springs.lift));
+    }
+    if (pressed) {
+      tapSlide.set(1);
+    }
+    if (tapping) {
+      settleOnArrival.set(true);
+    } else if (moved.get() && index >= 0) {
+      dragRelease.set(1);
+      settleAt.set(index);
+      landing.set(withSpring(0, motion.springs.landOut));
+    } else {
+      const rise = withSpring(1, motion.springs.tapRise);
+      const dipping = tapDipping.get() && lift.get() > motion.tapLens.dipFrom;
+      const strength =
+        quick && !dipping
+          ? clamp01((pressTime - motion.tapLens.dentFrom) / (motion.tapLens.dentFull - motion.tapLens.dentFrom))
+          : 0;
+      const dripLater = strength > 0 && gliding.get();
+      dent.set(strength);
+      dripOnArrival.set(dripLater);
+      const dripNow = strength > 0 && !gliding.get();
+      const fall = withSpring(0, {
+        duration: lerp(motion.springs.release.duration, motion.springs.landFall.duration, strength),
+        dampingRatio: 1,
+      });
+      tapGlow.set(
+        quick && strength < 1 && !gliding.get() && tapStay.get() === 1
+          ? withSequence(
+              withSpring(1, motion.springs.tapRise),
+              withDelay(motion.tapLens.glowHold, withSpring(0, motion.springs.tapGlowOut)),
+            )
+          : 0,
+      );
+      if (dripNow) {
+        startDrip(strength);
+      } else {
+        dripShape.set(0);
+        landing.set(withSpring(0, motion.springs.landOut));
+      }
+      lift.set(
+        pressSwitch
+          ? settle
+          : dripLater
+            ? rise
+            : quick || pressed
+              ? dipping
+                ? withSequence(withSpring(motion.tapLens.dip, motion.springs.tapDip), rise, settle)
+                : withSequence(rise, gliding.get() ? withDelay(motion.switchTravel.hold + linger, settle) : fall)
+              : settle,
+      );
+      tapDipping.set(false);
+    }
+    barPress.set(withSpring(0, motion.springs.barPressOut));
+    barGrowth.set(withSpring(0, motion.springs.barPressOut));
+    if (index >= 0) {
+      if (!tapping && !(gliding.get() && index === glideTo.get())) {
+        lensPosition.set(withSpring(index, motion.springs.lens));
+      }
+      settledIndex.set(index);
+      if (committed && index !== focused.get()) {
+        scheduleOnRN(selectTab, index, moved.get() ? 0 : Math.max(0, motion.switchTravel.navigateDelay - pressTime));
+      } else if (focused.get() < 0) {
+        lensPresence.set(withSpring(0, motion.springs.morph));
+      }
+    }
+  };
+
   const pan = usePanGesture({
     enabled: !searchFocused,
     minDistance: 0,
@@ -473,190 +683,60 @@ export const FloatingTabBar = () => {
         setTabBarCollapsed(collapse, 0);
         return;
       }
-      const index = Math.round(positionAt(event.x));
-      if (index !== focused.get()) {
-        scheduleOnRN(tick);
-      }
-      dragIndex.set(index);
-      moved.set(false);
-      const switching = index !== focused.get();
-      tapStay.set(switching ? 0 : 1);
-      pressedAt.set(Date.now());
-      pressing.set(true);
-      dripOnArrival.set(false);
-      settleFill.set(withSpring(0, motion.springs.lift));
-      settleOnArrival.set(false);
-      tapSlide.set(1);
-      tapSlide.set(withDelay(motion.tapSlide.holdDelay, withSpring(0, motion.springs.lift)));
-      landing.set(switching ? withSpring(0, motion.springs.lift) : withSpring(1, motion.springs.landIn));
-      barPress.set(withSpring(1, motion.springs.barPressIn));
-      barGrowth.set(withSpring(motion.barGrow.held, motion.springs.barGrowIn));
-      dragRelease.set(0);
-      settleAt.set(-1);
-      lensPresence.set(withSpring(1, motion.springs.lift));
-      pressSquash.set(withSequence(withSpring(1, motion.springs.track), withSpring(0, motion.springs.edgeSettle)));
-      jellyVelocity.set(jellyVelocity.get() + motion.jelly.pressKick * (switching ? motion.switchTravel.pressKick : 1));
-      if (switching) {
-        lift.set(withSpring(1, motion.springs.lift));
-      } else {
-        tapGlow.set(withSpring(1, motion.springs.tapRise));
-        const dipping = lift.get() > motion.tapLens.dipFrom;
-        const rise = withSpring(1, motion.springs.tapLift);
-        tapDipping.set(dipping);
-        lift.set(dipping ? withSequence(withSpring(motion.tapLens.dip, motion.springs.tapDip), rise) : rise);
-      }
-      gliding.set(switching);
-      glideTo.set(index);
-      glideSpan.set(Math.abs(index - lensPosition.get()));
-      glideFrom.set(lensPosition.get());
-      if (switching) {
-        const distance = index - lensPosition.get();
-        const extra = Math.max(0, Math.abs(distance) - 1);
-        const travel = withSpring(index, {
-          duration: motion.switchTravel.duration + motion.switchTravel.perSlot * extra,
-          dampingRatio: motion.switchTravel.dampingRatio,
-          velocity: Math.sign(distance) * (motion.switchTravel.kick + motion.switchTravel.kickPerSlot * extra),
-        });
-        lensPosition.set(motion.switchTravel.delay > 0 ? withDelay(motion.switchTravel.delay, travel) : travel);
-      } else {
-        lensPosition.set(withSpring(index, motion.springs.lens));
-      }
-      dragOrigin.set(index);
-      if (!switching) {
-        const tabCenter = barWidth.get() / 2 + pillShiftX.get() + (index - middleIndex) * itemWidth.get();
-        pokeSide.set(clamp01((event.x - tabCenter) / Math.max(itemWidth.get(), 1) + 0.5) * 2 - 1);
-        poke.set(
-          withSequence(
-            withSpring(motion.poke.tap, motion.springs.pokeIn),
-            withDelay(motion.poke.holdDelay, withSpring(1, motion.springs.pokeHold)),
-          ),
-        );
-      }
+      pressBegin(event.x);
     },
     onUpdate: (event) => {
       if (expandOnly.get()) {
         return;
       }
-      if (!moved.get() && Math.abs(event.translationX) < motion.dragThreshold) {
-        return;
-      }
-      moved.set(true);
-      tapGlow.set(0);
-      poke.set(withSpring(0, motion.springs.pokeHold));
-      gliding.set(false);
-      tapSlide.set(withSpring(0, motion.springs.lift));
-      sliding.set(false);
-      settleOnArrival.set(false);
-      barPress.set(withSpring(1, motion.springs.barPressIn));
-      barGrowth.set(withSpring(motion.barGrow.held, motion.springs.barGrowIn));
-      const width = barWidth.get();
-      const inner =
-        event.x < inlinePad ? event.x - inlinePad : event.x > width - inlinePad ? event.x - (width - inlinePad) : 0;
-      const rubber = Math.sign(inner) * motion.nudgeMax * (1 - 1 / (1 + Math.abs(inner) / motion.nudgeRange));
-      const follow = width > 0 ? ((event.x - width / 2) / (width / 2)) * motion.nudgeFollow : 0;
-      nudge.set(withSpring(rubber + follow, motion.springs.track));
-      const position = positionAt(event.x);
-      const lastCenter = barWidth.get() - inlinePad - fullItemWidth.get() / 2;
-      const pushTarget = clamp01((event.x - lastCenter) / Math.max(fullItemWidth.get() / 2, 1));
-      push.set(withSpring(pushTarget, motion.springs.track));
-      lensPosition.set(withSpring(position, motion.springs.track));
-      const index = Math.round(position);
-      if (index !== dragIndex.get()) {
-        dragIndex.set(index);
-        scheduleOnRN(tick);
-      }
+      pressUpdate(event.x, event.translationX);
     },
     onFinalize: (event) => {
       if (expandOnly.get()) {
         expandOnly.set(false);
         return;
       }
-      pressing.set(false);
-      poke.set(withSpring(0, motion.springs.pokeOut));
-      const committed = !event.canceled || !moved.get();
-      const pressTime = Date.now() - pressedAt.get();
-      const linger = gliding.get() ? motion.switchTravel.lingerPerSlot * Math.max(0, glideSpan.get() - 1) : 0;
-      settleFill.set(
-        withDelay(
-          Math.max(0, motion.switchTravel.fillDelay + linger - pressTime),
-          withSpring(1, motion.springs.settleFill),
-        ),
-      );
-      const index = committed ? dragIndex.get() : focused.get();
-      dragIndex.set(-1);
-      push.set(withSpring(0, motion.springs.release));
-      nudge.set(withSpring(0, motion.springs.edgeSettle));
-      const settle = withSpring(0, motion.springs.release);
-      const quick = !moved.get() && tapSlide.get() > 0.5;
-      const tapping = quick && sliding.get();
-      const pressed = !moved.get() && !quick && tapStay.get() === 1;
-      const pressSwitch = !moved.get() && !quick && gliding.get();
-      if (quick || pressSwitch) {
-        tapSlide.set(withSpring(1, motion.springs.lift));
+      pressEnd(event.canceled);
+    },
+  });
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
+  const backDrag = usePanGesture({
+    enabled: searchFocused,
+    minDistance: motion.searchDrag.start,
+    onActivate: (event) => {
+      const x = modeInset + event.x;
+      const index = Math.round(positionAt(x));
+      backDragging.set(true);
+      lensPosition.set(index);
+      focused.set(index);
+      edgesReady.set(false);
+      backLight.set(0);
+      modeTarget.set(0);
+      searchPop.set(withSpring(0, motion.springs.searchDrag));
+      searchMode.set(withSpring(0, motion.springs.searchDrag));
+      scheduleOnRN(dismissKeyboard);
+      pressBegin(x);
+      pressUpdate(x, motion.dragThreshold + 1);
+    },
+    onUpdate: (event) => {
+      if (backDragging.get()) {
+        pressUpdate(modeInset + event.x, event.translationX);
       }
-      if (pressed) {
-        tapSlide.set(1);
+    },
+    onFinalize: () => {
+      if (!backDragging.get()) {
+        return;
       }
-      if (tapping) {
-        settleOnArrival.set(true);
-      } else if (moved.get() && index >= 0) {
-        dragRelease.set(1);
-        settleAt.set(index);
-        landing.set(withSpring(0, motion.springs.landOut));
-      } else {
-        const rise = withSpring(1, motion.springs.tapRise);
-        const dipping = tapDipping.get() && lift.get() > motion.tapLens.dipFrom;
-        const strength =
-          quick && !dipping
-            ? clamp01((pressTime - motion.tapLens.dentFrom) / (motion.tapLens.dentFull - motion.tapLens.dentFrom))
-            : 0;
-        const dripLater = strength > 0 && gliding.get();
-        dent.set(strength);
-        dripOnArrival.set(dripLater);
-        const dripNow = strength > 0 && !gliding.get();
-        const fall = withSpring(0, {
-          duration: lerp(motion.springs.release.duration, motion.springs.landFall.duration, strength),
-          dampingRatio: 1,
-        });
-        tapGlow.set(
-          quick && strength < 1 && !gliding.get() && tapStay.get() === 1
-            ? withSequence(
-                withSpring(1, motion.springs.tapRise),
-                withDelay(motion.tapLens.glowHold, withSpring(0, motion.springs.tapGlowOut)),
-              )
-            : 0,
-        );
-        if (dripNow) {
-          startDrip(strength);
-        } else {
-          dripShape.set(0);
-          landing.set(withSpring(0, motion.springs.landOut));
-        }
-        lift.set(
-          pressSwitch
-            ? settle
-            : dripLater
-              ? rise
-              : quick || pressed
-                ? dipping
-                  ? withSequence(withSpring(motion.tapLens.dip, motion.springs.tapDip), rise, settle)
-                  : withSequence(rise, gliding.get() ? withDelay(motion.switchTravel.hold + linger, settle) : fall)
-                : settle,
-        );
-        tapDipping.set(false);
-      }
-      barPress.set(withSpring(0, motion.springs.barPressOut));
-      barGrowth.set(withSpring(0, motion.springs.barPressOut));
-      if (index >= 0) {
-        if (!tapping && !(gliding.get() && index === glideTo.get())) {
-          lensPosition.set(withSpring(index, motion.springs.lens));
-        }
-        settledIndex.set(index);
-        if (committed && index !== focused.get()) {
-          scheduleOnRN(selectTab, index, moved.get() ? 0 : Math.max(0, motion.switchTravel.navigateDelay - pressTime));
-        } else if (focused.get() < 0) {
-          lensPresence.set(withSpring(0, motion.springs.morph));
-        }
+      backDragging.set(false);
+      const index = dragIndex.get();
+      const selected = index !== focused.get();
+      pressEnd(false);
+      if (!selected && index >= 0) {
+        scheduleOnRN(selectTab, index);
       }
     },
   });
@@ -719,7 +799,11 @@ export const FloatingTabBar = () => {
     const squishForce =
       -squishOmega * squishOmega * squish.get() -
       2 *
-        (gliding.get() ? motion.switchTravel.squishDamping : motion.squish.damping) *
+        (gliding.get()
+          ? motion.switchTravel.squishDamping
+          : sliding.get()
+            ? motion.squish.damping
+            : motion.squish.dragDamping) *
         squishOmega *
         squishVelocity.get();
     const nextSquishVelocity = squishVelocity.get() + squishForce * dt;
@@ -1060,17 +1144,14 @@ export const FloatingTabBar = () => {
     const travel = barWidth.get() + layout.tabBarGap + fullHeight / 2 - fieldGlyphCenter;
     if (modeTarget.get() === 0) {
       return {
-        opacity:
-          searchPress.press.get() *
-          (mode < motion.backTravel.handoff
-            ? 1
-            : clamp01((mode - motion.searchClose.fadeFrom) / (1 - motion.searchClose.fadeFrom))),
+        opacity: searchPress.press.get() * clamp01(searchPop.get() * motion.searchClose.lightHold),
         transform: [
           {
             translateX:
               (-motion.searchPop.shift * (1 - clamp01(searchPop.get())) * clamp01(mode)) /
               Math.max(searchScale.get(), 0.01),
           },
+          { scale: lerp(motion.searchClose.circleScale, 1, clamp01(searchPop.get()) ** 2) },
         ],
       };
     }
@@ -1085,17 +1166,36 @@ export const FloatingTabBar = () => {
     opacity: 1 - searchPress.press.get() * iconDim,
   }));
 
+  const keyboardReach = Math.max(0, barLeft + modeInset - motion.searchKeyboard.edge);
+  const keyboardSpread = useDerivedValue(() => keyboardReach * clamp01(searchRaise.get()));
+
+  useAnimatedReaction(
+    () => ({ closing: modeTarget.get() === 0, raised: searchRaise.get() >= motion.searchKeyboard.dipAt }),
+    (next, previous) => {
+      if (next.closing && !next.raised && previous?.raised) {
+        searchDip.set(
+          withSequence(
+            withSpring(motion.searchKeyboard.dip, motion.springs.searchDipIn),
+            withSpring(0, motion.springs.searchDipOut),
+          ),
+        );
+      }
+    },
+  );
+  const tileSink = useDerivedValue(() => -barLift.get());
   const barLiftStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: Math.min(0, keyboardHeight.get() + bottom - space[8]) * clamp01(searchMode.get()),
-      },
-    ],
+    transform: [{ translateY: barLift.get() }],
+  }));
+  const searchSpreadStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: keyboardSpread.get() }, { translateY: searchDip.get() }],
   }));
 
   const pillModeStyle = useAnimatedStyle(() => ({
     opacity:
       1 - clamp01(searchMode.get() * (modeTarget.get() === 1 ? motion.searchTabs.fade : motion.searchTabs.closeFade)),
+    transform: [
+      { translateY: tileSink.get() },
+    ],
   }));
   const searchCenter = useDerivedValue(() => barWidth.get() + layout.tabBarGap + fullHeight / 2);
   const pillReach = useDerivedValue(() =>
@@ -1164,6 +1264,15 @@ export const FloatingTabBar = () => {
     const pop = searchPop.get();
     const popPlace = clamp01(pop);
     const pad = glass.pad;
+    const fit = rowFit.get();
+    const ride = modeTarget.get() === 0 ? settled : 0;
+    const frostCenter = inlinePad + layout.bubbleRestWidth / 2 + lensGeometry.get().translateX;
+    const frostRideEnd = modeInset + (modeHeight / width) * frostCenter;
+    const frostX = fit.x + frostCenter * fit.scale - (frostRideEnd - modeInset - modeHeight / 2) * ride;
+    const frostY = fullHeight / 2 + lensGeometry.get().translateY;
+    const frostShrink = lerp(1, modeHeight / lensFullHeight, ride);
+    const frostHalfX = ((layout.bubbleRestWidth * lensGeometry.get().scaleX) / 2) * frostShrink;
+    const frostHalfY = ((lensFullHeight * lensGeometry.get().scaleY) / 2) * frostShrink;
 
     const growX = barGrowth.get() * motion.barGrow.x * (1 - settled);
     const grow = barGrowth.get() * motion.barGrow.y * (1 - settled);
@@ -1188,20 +1297,34 @@ export const FloatingTabBar = () => {
       backBump.get() * motion.searchBump.squish;
     const backTop = lerp(pillTop, modeInset, settledY) - backGrow;
     const backBottom = lerp(fullHeight - pillInset + grow, fullHeight - modeInset, settledY) + backGrow;
+    const spread = keyboardSpread.get();
+    const sink = tileSink.get();
+    const dip = searchDip.get();
+    const backSpread =
+      modeTarget.get() === 0 && mode > 0 ? backLight.get() * Math.pow(settled, glass.backGlowFade) : 0;
 
     const searchX = width + layout.tabBarGap + fullHeight / 2;
     const circleY = fullHeight / 2;
     const searchRadius = (fullHeight / 2) * searchScale.get();
-    const fieldEnd = searchX + searchRadius - motion.searchPop.shift * settled;
-    const circleX = lerp(searchX, lerp(searchX - motion.searchPop.shift, searchX, popPlace), settled);
-    const circleRadius = lerp(
-      searchRadius,
-      lerp(searchRadius * motion.searchPop.hiddenScale, searchRadius, pop),
-      settled,
-    );
+    const fieldEnd = searchX + searchRadius - motion.searchPop.shift * settled + spread;
+    const circleX = lerp(searchX, lerp(searchX - motion.searchPop.shift, searchX, popPlace), settled) + spread;
+    const hiddenScale = modeTarget.get() === 0 ? motion.searchClose.circleScale : motion.searchPop.hiddenScale;
+    const circleRadius =
+      modeTarget.get() === 0
+        ? lerp(
+            searchRadius,
+            lerp(searchRadius * hiddenScale, searchRadius, pop * pop),
+            clamp01(settled * motion.searchClose.circleHold),
+          )
+        : lerp(searchRadius, lerp(searchRadius * hiddenScale, searchRadius, pop), settled);
 
-    const fieldLeft = lerp(searchX - searchRadius, pillLeft + modeInset + modeHeight + layout.searchModeGap, settled);
-    const fieldRight = lerp(fieldEnd, searchX - modeRadius - layout.searchModeGap, popPlace);
+    const fieldStart = lerp(
+      pillLeft + modeInset + modeHeight + layout.searchModeGap,
+      pillLeft + modeInset,
+      clamp01(searchRaise.get()),
+    ) - spread;
+    const fieldLeft = lerp(searchX - searchRadius, fieldStart, settled);
+    const fieldRight = lerp(fieldEnd, searchX - modeRadius - layout.searchModeGap + spread, popPlace);
     const fieldTop = lerp(circleY - searchRadius, modeInset, settledY);
     const fieldBottom = lerp(circleY + searchRadius, fullHeight - modeInset, settledY);
     const tucked =
@@ -1226,38 +1349,52 @@ export const FloatingTabBar = () => {
           lerp(motion.endMelt, 1, push.get()),
       ),
       dim: 0,
-      frost: glass.lensFrost * lensPresence.get() * grey.get() * (1 - clamp01(collapsed.get() * motion.labelFadeRate)),
+      frost:
+        glass.lensFrost *
+        lensPresence.get() *
+        grey.get() *
+        (1 - clamp01(collapsed.get() * motion.labelFadeRate)) *
+        (modeTarget.get() === 0
+          ? clamp01(
+              (motion.searchClose.fillFrom - mode) / (motion.searchClose.fillFrom - motion.searchClose.fillTo),
+            )
+          : 1),
       frostClear: glass.lensFrostClear[scheme],
       frostRadius: glass.lensFrostRadius[scheme],
-      frostLeft:
-        inlinePad +
-        (layout.bubbleRestWidth * (1 - lensGeometry.get().scaleX)) / 2 +
-        lensGeometry.get().translateX +
-        pad,
-      frostRight:
-        inlinePad +
-        (layout.bubbleRestWidth * (1 + lensGeometry.get().scaleX)) / 2 +
-        lensGeometry.get().translateX +
-        pad,
-      frostTop: fullHeight / 2 + lensGeometry.get().translateY - (lensFullHeight * lensGeometry.get().scaleY) / 2 + pad,
-      frostBottom:
-        fullHeight / 2 + lensGeometry.get().translateY + (lensFullHeight * lensGeometry.get().scaleY) / 2 + pad,
-      glowX: (leftEdge.get() + rightEdge.get()) / 2 + pad,
-      glowY: fullHeight / 2 + pad,
-      glowSpread: glass.pressGlowSpread,
-      glowStrength: glass.pressGlow * shine.get() * barPress.get() * (1 - tapSlide.get()) * (1 - settled),
+      frostLeft: frostX - frostHalfX + pad,
+      frostRight: frostX + frostHalfX + pad,
+      frostTop: frostY - frostHalfY + pad,
+      frostBottom: frostY + frostHalfY + pad,
+      ...(backSpread > 0
+        ? {
+            glowX: backLeft + modeHeight / 2 + pad,
+            glowY: (backTop + backBottom) / 2 + pad,
+            glowSpread: (backRight - backLeft) * glass.backGlowSpread,
+            glowStrength: glass.backGlow[scheme] * backSpread,
+          }
+        : {
+            glowX: (leftEdge.get() + rightEdge.get()) / 2 + pad,
+            glowY: fullHeight / 2 + pad,
+            glowSpread: glass.pressGlowSpread,
+            glowStrength: glass.pressGlow * shine.get() * barPress.get() * (1 - tapSlide.get()) * (1 - settled),
+          }),
       wideMix: lerp(glass.wideMix[scheme], glass.pressWideMix[scheme], barPress.get() * (1 - settled)),
       shapes: [
         backLeft + pad,
-        backTop + pad,
+        backTop + sink + pad,
         backRight + pad,
-        backBottom + pad,
+        backBottom + sink + pad,
         circleX - fieldRadius + bump * motion.searchBump.squish + pad,
-        circleY - fieldRadius + pad,
+        circleY - fieldRadius + dip + pad,
         circleX + fieldRadius + pad,
-        circleY + fieldRadius + pad,
+        circleY + fieldRadius + dip + pad,
         ...(mode > 0
-          ? [fieldLeft + bump * motion.searchBump.squish + pad, fieldTop + pad, fieldRight + pad, fieldBottom + pad]
+          ? [
+              fieldLeft + bump * motion.searchBump.squish + pad,
+              fieldTop + dip + pad,
+              fieldRight + pad,
+              fieldBottom + dip + pad,
+            ]
           : []),
       ],
     };
@@ -1272,13 +1409,18 @@ export const FloatingTabBar = () => {
       opacity:
         modeTarget.get() === 1
           ? clamp01(searchMode.get() * 2 - 1)
-          : clamp01((searchMode.get() - motion.searchClose.fadeFrom) / (1 - motion.searchClose.fadeFrom)),
+          : clamp01((pop - motion.searchClose.glyphGone) / (1 - motion.searchClose.glyphGone)),
       transform: [
         {
           translateX: (-motion.searchPop.shift * (1 - pop) * settled) / Math.max(searchScale.get(), 0.01),
         },
         {
-          scale: lerp(motion.searchPop.glyphScale / (1 + searchPress.press.get() * motion.pressGrow), 1, pop),
+          scale: lerp(
+            (modeTarget.get() === 0 ? motion.searchClose.glyphScale : motion.searchPop.glyphScale) /
+              (1 + searchPress.press.get() * motion.pressGrow),
+            1,
+            modeTarget.get() === 0 ? pop * pop : pop,
+          ),
         },
       ],
     };
@@ -1289,6 +1431,7 @@ export const FloatingTabBar = () => {
     const growX = barGrowth.get() * motion.barGrow.x * (1 - clamp01(searchMode.get()));
     return {
       transform: [
+        { translateY: tileSink.get() },
         { translateX: (-growX * (1 - motion.barGrow.towardSearch)) / 2 },
         { scale: 1 + (growX * (1 + motion.barGrow.towardSearch)) / width },
       ],
@@ -1500,7 +1643,7 @@ export const FloatingTabBar = () => {
             </Animated.View>
           </Animated.View>
         </GestureDetector>
-        <Animated.View style={styles.search}>
+        <Animated.View style={[styles.search, searchSpreadStyle]}>
           <Pressable
             style={StyleSheet.absoluteFill}
             onPress={searchFocused ? closeSearch : openSearch}
@@ -1635,12 +1778,19 @@ export const FloatingTabBar = () => {
         travel={{
           index: backIndex,
           slotWidth: fullItemWidth,
+          width: barWidth,
           circle: searchCenter,
           press: searchPress.press,
           target: modeTarget,
           fit: rowFit,
         }}
-        onBack={leaveSearch}
+        onBack={backSearch}
+        backDrag={backDrag}
+        keyboard={searchRaise}
+        spread={keyboardSpread}
+        reach={keyboardReach}
+        sink={tileSink}
+        dip={searchDip}
       />
     </Animated.View>
   );

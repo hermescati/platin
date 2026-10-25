@@ -1,6 +1,8 @@
-import { useEffect, useRef, type ComponentRef } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { useAnimatedProps, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
+import { GestureDetector, type PanGesture } from 'react-native-gesture-handler';
+import { KeyboardEvents } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
 
 import { AnimatedNativeGlassBlur } from '@/components/glass/NativeGlass';
 
@@ -19,10 +21,17 @@ const glyphCenter =
   modeInset + modeHeight + layout.searchModeGap + layout.searchFieldInset + layout.searchFieldIconSize / 2;
 const glyphFromScale = layout.searchIconSize / layout.searchFieldIconSize;
 const textFrom = -(layout.searchFieldIconSize + space[4]);
+const fieldLeft = modeInset + modeHeight + layout.searchModeGap;
+const fieldRight = modeInset + modeHeight + layout.searchModeGap;
 
 const clamp01 = (value: number) => {
   'worklet';
   return Math.min(1, Math.max(0, value));
+};
+
+const lerp = (from: number, to: number, t: number) => {
+  'worklet';
+  return from + (to - from) * t;
 };
 
 interface Props {
@@ -33,33 +42,67 @@ interface Props {
   travel: {
     index: number;
     slotWidth: SharedValue<number>;
+    width: SharedValue<number>;
     circle: SharedValue<number>;
     press: SharedValue<number>;
     target: SharedValue<number>;
     fit: SharedValue<{ scale: number; x: number; y: number }>;
   };
   onBack: () => void;
+  backDrag: PanGesture;
+  keyboard: SharedValue<number>;
+  spread: SharedValue<number>;
+  reach: number;
+  sink: SharedValue<number>;
+  dip: SharedValue<number>;
 }
 
-export const SearchMode = ({ active, mode, backTab, backPress, travel, onBack }: Props) => {
+export const SearchMode = ({
+  active,
+  mode,
+  backTab,
+  backPress,
+  travel,
+  onBack,
+  backDrag,
+  keyboard,
+  spread,
+  reach,
+  sink,
+  dip,
+}: Props) => {
   const { color, scheme } = useTheme();
   const iconDim = motion.pressIconDim[scheme];
   const { query, setQuery } = useSearchQuery();
   const input = useRef<ComponentRef<typeof TextInput>>(null);
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  const wide = useSharedValue(0);
+
+  useEffect(() => {
+    const subscriptions = [
+      KeyboardEvents.addListener('keyboardWillShow', () => {
+        setKeyboardUp(true);
+        wide.set(1);
+      }),
+      KeyboardEvents.addListener('keyboardWillHide', () => setKeyboardUp(false)),
+      KeyboardEvents.addListener('keyboardDidHide', () => wide.set(0)),
+    ];
+    return () => subscriptions.forEach((subscription) => subscription.remove());
+  }, [wide]);
 
   useEffect(() => {
     if (!active) {
       input.current?.blur();
       return;
     }
-    const frame = requestAnimationFrame(() => input.current?.focus());
-    return () => cancelAnimationFrame(frame);
+    const timer = setTimeout(() => input.current?.focus(), motion.searchKeyboard.focusDelay);
+    return () => clearTimeout(timer);
   }, [active]);
 
-  const { index: travelIndex, slotWidth, circle, press: travelPress, target, fit: rowFit } = travel;
+  const { index: travelIndex, slotWidth, width: barWidth, circle, press: travelPress, target, fit: rowFit } = travel;
   const backStyle = useAnimatedStyle(() => ({
     opacity: mode.get() > motion.backTravel.handoff ? 1 : 0,
-    transform: [{ scale: 1 + backPress.press.get() * motion.pressGrow }],
+    transform: [{ translateY: sink.get() }, { scale: 1 + backPress.press.get() * motion.pressGrow }],
   }));
   const backOutlineStyle = useAnimatedStyle(() => ({
     opacity: target.get() === 0 ? 0 : 1,
@@ -67,19 +110,38 @@ export const SearchMode = ({ active, mode, backTab, backPress, travel, onBack }:
   const backFilledStyle = useAnimatedStyle(() => ({
     opacity: target.get() === 0 ? 1 : 0,
   }));
-  const backFillStyle = useAnimatedStyle(() => ({ opacity: backPress.press.get() }));
+  const backFillStyle = useAnimatedStyle(() => ({
+    opacity: target.get() === 0 ? 0 : backPress.press.get(),
+  }));
   const backInkStyle = useAnimatedStyle(() => {
     const away = 1 - clamp01(mode.get());
     const fit = rowFit.get();
-    const fromX = fit.x + fit.scale * (layout.tabBarInlinePadding + (travelIndex + 0.5) * slotWidth.get()) - backCenter;
+    const settled = 1 - away;
+    const width = Math.max(barWidth.get(), 1);
+    const slot = layout.tabBarInlinePadding + (travelIndex + 0.5) * slotWidth.get();
+    const ride = modeInset * settled + (lerp(width, modeHeight, settled) / width) * slot;
+    const rideEnd = modeInset + (modeHeight / width) * slot;
+    const fromX = ride - backCenter - (rideEnd - backCenter) * settled;
     const fromY = fit.y + fit.scale * (fullHeight - layout.tabLabelHeight) * 0.5 - backCenter;
     return {
       opacity: 1 - backPress.press.get() * iconDim,
-      transform: [{ translateX: fromX * away }, { translateY: fromY * away }],
+      transform: [{ translateX: fromX }, { translateY: fromY * away }],
     };
   });
+  const wideShift = modeHeight + layout.searchModeGap + reach;
   const fieldStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: (circle.get() - glyphCenter) * (1 - clamp01(mode.get())) }],
+    transform: [
+      {
+        translateX:
+          (circle.get() - glyphCenter) * (1 - clamp01(mode.get())) -
+          (modeHeight + layout.searchModeGap) * clamp01(keyboard.get()) * clamp01(mode.get()) -
+          spread.get() +
+          wideShift * wide.get(),
+      },
+      { translateY: dip.get() },
+    ],
+    left: fieldLeft - wideShift * wide.get(),
+    right: fieldRight - reach * wide.get(),
   }));
   const glyphStyle = useAnimatedStyle(() => ({
     opacity: mode.get() > motion.backTravel.handoff ? 1 : 0,
@@ -115,25 +177,28 @@ export const SearchMode = ({ active, mode, backTab, backPress, travel, onBack }:
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={active ? 'box-none' : 'none'}>
-      <Pressable
-        style={styles.back}
-        onPress={goBack}
-        onPressIn={backPress.onPressIn}
-        onPressOut={backPress.onPressOut}
-        accessibilityRole="button"
-        accessibilityLabel={backTab.label}>
-        <Animated.View style={[StyleSheet.absoluteFill, backStyle]}>
-          <Animated.View style={[styles.fill, { backgroundColor: color.chrome.pressFill }, backFillStyle]} />
-          <Animated.View style={[styles.center, backInkStyle]}>
-            <Animated.View style={backOutlineStyle}>
-              <Icon name={backTab.icon} size={layout.tabIconSize} />
-            </Animated.View>
-            <Animated.View style={[StyleSheet.absoluteFill, styles.center, backFilledStyle]}>
-              <Icon name={backTab.icon} variant="fill" size={layout.tabIconSize} tone="accent" />
+      <GestureDetector gesture={backDrag}>
+        <Pressable
+          style={styles.back}
+          pointerEvents={keyboardUp ? 'none' : 'auto'}
+          onPress={goBack}
+          onPressIn={backPress.onPressIn}
+          onPressOut={backPress.onPressOut}
+          accessibilityRole="button"
+          accessibilityLabel={backTab.label}>
+          <Animated.View style={[StyleSheet.absoluteFill, backStyle]}>
+            <Animated.View style={[styles.fill, { backgroundColor: color.chrome.pressFill }, backFillStyle]} />
+            <Animated.View style={[styles.center, backInkStyle]}>
+              <Animated.View style={backOutlineStyle}>
+                <Icon name={backTab.icon} size={layout.tabIconSize} />
+              </Animated.View>
+              <Animated.View style={[StyleSheet.absoluteFill, styles.center, backFilledStyle]}>
+                <Icon name={backTab.icon} variant="fill" size={layout.tabIconSize} tone="accent" />
+              </Animated.View>
             </Animated.View>
           </Animated.View>
-        </Animated.View>
-      </Pressable>
+        </Pressable>
+      </GestureDetector>
       <Animated.View style={[styles.field, fieldStyle]}>
         <Animated.View style={glyphStyle}>
           <Icon name="search" size={layout.searchFieldIconSize} />
@@ -184,8 +249,8 @@ const styles = StyleSheet.create({
   },
   field: {
     position: 'absolute',
-    left: modeInset + modeHeight + layout.searchModeGap,
-    right: modeInset + modeHeight + layout.searchModeGap,
+    left: fieldLeft,
+    right: fieldRight,
     top: modeInset,
     height: modeHeight,
     flexDirection: 'row',
