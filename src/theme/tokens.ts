@@ -313,7 +313,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     },
     heat: { low: withAlpha(a[500], 0.22), mid: withAlpha(a[500], 0.5), high: a[500] },
     chrome: {
-      tint: 'rgba(245, 245, 245, 0.61)',
+      tint: 'rgba(245, 245, 245, 0.52)',
       fallback: n[50],
       shadow: 'rgba(0, 0, 0, 0.012)',
       lens: 'rgba(0, 0, 0, 0.07)',
@@ -451,7 +451,7 @@ export const glass = {
   pressWideMix: { dark: 0.8, light: 0.85 },
   chroma: { dark: 1.8, light: 2.2 },
   tone: {
-    dark: { on: 1, base: 0.125, gain: 0.593, gamma: 0.705, frostBase: 0.035, frostGain: 0.518, frostGamma: 1, frostChroma: 2.6 },
+    dark: { on: 1, base: 0.125, gain: 0.45, gamma: 0.705, frostBase: 0.035, frostGain: 0.518, frostGamma: 1, frostChroma: 2.6 },
     light: { on: 0, base: 0, gain: 1, gamma: 1, frostBase: 0, frostGain: 1, frostGamma: 1, frostChroma: 1 },
   },
   dispersion: 0,
