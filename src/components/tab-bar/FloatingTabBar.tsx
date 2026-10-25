@@ -314,12 +314,15 @@ export const FloatingTabBar = () => {
   const gliding = useSharedValue(false);
   const glideTo = useSharedValue(0);
   const glideSpan = useSharedValue(1);
+  const glideFrom = useSharedValue(0);
   const slideShape = useDerivedValue(() => tapSlide.get() * (1 - tapStay.get()) * motion.tapSlide.canal);
   const shine = useDerivedValue(() => lift.get() * (1 - slideShape.get()));
   const held = useDerivedValue(() => lerp(1, barPress.get(), tapStay.get()));
   const holding = useDerivedValue(() => tapStay.get() * barPress.get());
   const squishVelocity = useSharedValue(0);
   const wallSide = useSharedValue(0);
+  const poke = useSharedValue(0);
+  const pokeSide = useSharedValue(0);
   const approachSpeed = useSharedValue(0);
   const movingTarget = useSharedValue(0);
 
@@ -492,7 +495,7 @@ export const FloatingTabBar = () => {
       settleAt.set(-1);
       lensPresence.set(withSpring(1, motion.springs.lift));
       pressSquash.set(withSequence(withSpring(1, motion.springs.track), withSpring(0, motion.springs.edgeSettle)));
-      jellyVelocity.set(jellyVelocity.get() + motion.jelly.pressKick);
+      jellyVelocity.set(jellyVelocity.get() + motion.jelly.pressKick * (switching ? motion.switchTravel.pressKick : 1));
       if (switching) {
         lift.set(withSpring(1, motion.springs.lift));
       } else {
@@ -505,6 +508,7 @@ export const FloatingTabBar = () => {
       gliding.set(switching);
       glideTo.set(index);
       glideSpan.set(Math.abs(index - lensPosition.get()));
+      glideFrom.set(lensPosition.get());
       if (switching) {
         const distance = index - lensPosition.get();
         const extra = Math.max(0, Math.abs(distance) - 1);
@@ -518,6 +522,16 @@ export const FloatingTabBar = () => {
         lensPosition.set(withSpring(index, motion.springs.lens));
       }
       dragOrigin.set(index);
+      if (!switching) {
+        const tabCenter = barWidth.get() / 2 + pillShiftX.get() + (index - middleIndex) * itemWidth.get();
+        pokeSide.set(clamp01((event.x - tabCenter) / Math.max(itemWidth.get(), 1) + 0.5) * 2 - 1);
+        poke.set(
+          withSequence(
+            withSpring(motion.poke.tap, motion.springs.pokeIn),
+            withDelay(motion.poke.holdDelay, withSpring(1, motion.springs.pokeHold)),
+          ),
+        );
+      }
     },
     onUpdate: (event) => {
       if (expandOnly.get()) {
@@ -528,6 +542,7 @@ export const FloatingTabBar = () => {
       }
       moved.set(true);
       tapGlow.set(0);
+      poke.set(withSpring(0, motion.springs.pokeHold));
       gliding.set(false);
       tapSlide.set(withSpring(0, motion.springs.lift));
       sliding.set(false);
@@ -557,6 +572,7 @@ export const FloatingTabBar = () => {
         return;
       }
       pressing.set(false);
+      poke.set(withSpring(0, motion.springs.pokeOut));
       const committed = !event.canceled || !moved.get();
       const pressTime = Date.now() - pressedAt.get();
       const linger = gliding.get() ? motion.switchTravel.lingerPerSlot * Math.max(0, glideSpan.get() - 1) : 0;
@@ -901,6 +917,9 @@ export const FloatingTabBar = () => {
       scaleY *= 1 + squish.get() * motion.squish.dragHeight;
     }
     scaleY /= Math.max(wobble, 0.5);
+    const pressed = poke.get() * pokeSide.get();
+    scaleX *= 1 - Math.abs(pressed) * motion.poke.flat;
+    scaleY *= 1 + Math.abs(pressed) * motion.poke.bulge;
     const land = landing.get() * tapStay.get() * tapSlide.get();
     scaleX *= 1 + land * motion.tapLanding.wide;
     scaleY *= 1 - land * motion.tapLanding.flat;
@@ -910,7 +929,8 @@ export const FloatingTabBar = () => {
         inlinePad -
         fullWidth / 2 +
         heading.get() * Math.abs(jelly.get()) * (span / 2) * motion.jelly.lean +
-        wallSide.get() * squish.get() * (span / 2),
+        wallSide.get() * squish.get() * (span / 2) -
+        pressed * ((span * motion.poke.flat) / 2 + motion.poke.lean),
       translateY: slide * lift.get() * motion.tapSlide.drop + land * (1 - lift.get()) * motion.tapLanding.drop,
       scaleX,
       scaleY,
@@ -1349,14 +1369,31 @@ export const FloatingTabBar = () => {
     };
   });
 
+  const glideBend = useDerivedValue(() => {
+    const span = glideSpan.get();
+    if (!gliding.get() || span < 1.5) {
+      return 0;
+    }
+    const progress = clamp01(Math.abs(lensPosition.get() - glideFrom.get()) / span);
+    return Math.sin(Math.PI * progress) * clamp01((span - 1) / 2);
+  });
+
   const lensIconProps = useAnimatedProps(() => {
     const optics = lensOptics.get();
     return {
       ...optics,
       refraction: optics.refraction * glass.lensIconBend,
       rimOut: 0,
-      topBend: lerp(1, motion.tapLanding.iconBend, dripShape.get()),
-      topDepth: lerp(1, motion.tapLanding.iconDepth, dripShape.get() * dripShape.get()),
+      topBend: lerp(
+        1,
+        motion.tapLanding.iconBend,
+        Math.max(dripShape.get(), glideBend.get() * motion.switchTravel.topBend),
+      ),
+      topDepth: lerp(
+        1,
+        motion.tapLanding.iconDepth,
+        Math.max(dripShape.get() * dripShape.get(), glideBend.get() * motion.switchTravel.topBend),
+      ),
       rimPrism: glass.lensIconPrism * lensOut.get(),
     };
   });
@@ -1408,6 +1445,8 @@ export const FloatingTabBar = () => {
         ],
       ),
       rimPrism: glass.lensRimPrism[scheme] * reveal,
+      topBend: lerp(1, motion.tapLanding.iconBend, glideBend.get() * motion.switchTravel.topBend),
+      topDepth: lerp(1, motion.tapLanding.iconDepth, glideBend.get() * motion.switchTravel.topBend),
       edgeAxis: holding.get(),
       rimWidth: lerp(glass.lensRimWidth[scheme], glass.lensHeldRimWidth[scheme], holding.get()),
       prismAxis: holding.get(),

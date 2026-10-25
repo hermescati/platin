@@ -507,7 +507,7 @@ export const glass = {
   liftBlend: 12,
   meltBlend: 12,
   pressBlend: 6,
-  pressGlow: 0.1,
+  pressGlow: 0.035,
   pressGlowSpread: 62,
 } as const;
 
@@ -532,6 +532,9 @@ export const motion = {
     landFall: { duration: 190, dampingRatio: 1 },
     tapRise: { duration: 240, dampingRatio: 1, energyThreshold: 2e-3 },
     tapGlowOut: { duration: 420, dampingRatio: 1 },
+    pokeIn: { duration: 160, dampingRatio: 1 },
+    pokeHold: { duration: 320, dampingRatio: 1 },
+    pokeOut: { duration: 560, dampingRatio: 0.85 },
     release: { duration: 360, dampingRatio: 1 },
     settleFill: { duration: 360, dampingRatio: 1 },
     inkTone: { duration: 80, dampingRatio: 1 },
@@ -562,7 +565,7 @@ export const motion = {
   deflateTravel: 1.2,
   deflateRamp: 0.8,
   deflateSpeed: 0.6,
-  jelly: { period: 0.42, damping: 0.2, stretch: 0.14, kick: 0.12, pressKick: 1.2, max: 0.3, smoothing: 30, lean: 0.55, endZone: 0.04 },
+  jelly: { period: 0.42, damping: 0.2, stretch: 0.14, kick: 0.12, pressKick: 0.3, max: 0.3, smoothing: 30, lean: 0.55, endZone: 0.04 },
   squish: {
     period: 0.5,
     dragPeriod: 0.65,
@@ -609,6 +612,7 @@ export const motion = {
   },
   barGrow: { x: 6, y: 1.25, towardSearch: 1, held: 1.25 },
   dragSettle: { near: 0.15 },
+  poke: { tap: 0.5, holdDelay: 120, flat: 0.12, bulge: 0.04, lean: 8 },
   lensEdgeReach: -1.6,
   switchTravel: {
     duration: 450,
@@ -627,7 +631,9 @@ export const motion = {
     navigateDelay: 180,
     squishPeriod: 0.75,
     squishDamping: 0.75,
-    squishKick: 0.35,
+    squishKick: 0.25,
+    pressKick: 2.4,
+    topBend: 0.8,
     contactZone: 0.1,
     railGap: 2,
     heightToWidth: 0.5,
