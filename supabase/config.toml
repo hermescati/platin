@@ -424,3 +424,25 @@ entrypoint = "./functions/igdb-search/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/igdb-search/*.html" ]
+
+[functions.igdb-game]
+enabled = true
+verify_jwt = false
+import_map = "./functions/igdb-game/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/igdb-game/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/igdb-game/*.html" ]
+
+[functions.igdb-platforms]
+enabled = true
+verify_jwt = false
+import_map = "./functions/igdb-platforms/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/igdb-platforms/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/igdb-platforms/*.html" ]

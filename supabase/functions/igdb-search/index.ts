@@ -1,59 +1,24 @@
 import '@supabase/functions-js/edge-runtime.d.ts';
 import { withSupabase } from '@supabase/server';
 
+import { igdb, IgdbError } from '../_shared/igdb.ts';
+
 interface IgdbGame {
   id: number;
   name: string;
   slug?: string;
   cover?: { image_id: string };
   first_release_date?: number;
-  platforms?: { abbreviation?: string; name: string }[];
+  platforms?: { id: number; abbreviation?: string; name: string }[];
   total_rating?: number;
   total_rating_count?: number;
   game_type?: { type: string };
   parent_game?: { id: number; name: string; cover?: { image_id: string } };
 }
 
-interface CachedToken {
-  value: string;
-  expiresAt: number;
-}
-
-const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
-const GAMES_URL = 'https://api.igdb.com/v4/games';
 const RESULT_LIMIT = 20;
 const MIN_QUERY = 2;
 const MAX_QUERY = 100;
-const TOKEN_MARGIN_MS = 60_000;
-
-let cachedToken: CachedToken | null = null;
-
-const credentials = () => {
-  const clientId = Deno.env.get('IGDB_CLIENT_ID');
-  const clientSecret = Deno.env.get('IGDB_CLIENT_SECRET');
-  if (!clientId || !clientSecret) {
-    throw new Error('IGDB credentials are not configured');
-  }
-  return { clientId, clientSecret };
-};
-
-const accessToken = async (clientId: string, clientSecret: string) => {
-  if (cachedToken && cachedToken.expiresAt > Date.now()) {
-    return cachedToken.value;
-  }
-  const params = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: 'client_credentials',
-  });
-  const response = await fetch(`${TOKEN_URL}?${params}`, { method: 'POST' });
-  if (!response.ok) {
-    throw new Error(`Twitch token request failed with ${response.status}`);
-  }
-  const { access_token, expires_in } = (await response.json()) as { access_token: string; expires_in: number };
-  cachedToken = { value: access_token, expiresAt: Date.now() + expires_in * 1000 - TOKEN_MARGIN_MS };
-  return access_token;
-};
 
 const searchBody = (query: string) => {
   const escaped = query.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -70,8 +35,10 @@ const toResult = (game: IgdbGame) => ({
   name: game.name,
   slug: game.slug ?? null,
   coverId: game.cover?.image_id ?? null,
+  releaseDate: game.first_release_date ?? null,
   releaseYear: game.first_release_date ? new Date(game.first_release_date * 1000).getUTCFullYear() : null,
   platforms: (game.platforms ?? []).map((platform) => platform.abbreviation ?? platform.name),
+  platformIds: (game.platforms ?? []).map((platform) => platform.id),
   rating: game.total_rating ? Math.round(game.total_rating) : null,
   type: game.game_type?.type ?? null,
   parent: game.parent_game
@@ -92,26 +59,16 @@ export default {
     }
 
     try {
-      const { clientId, clientSecret } = credentials();
-      const token = await accessToken(clientId, clientSecret);
-      const response = await fetch(GAMES_URL, {
-        method: 'POST',
-        headers: { 'Client-ID': clientId, Authorization: `Bearer ${token}` },
-        body: searchBody(query),
-      });
-      if (response.status === 401) {
-        cachedToken = null;
-      }
-      if (!response.ok) {
-        return Response.json({ error: `IGDB request failed with ${response.status}` }, { status: 502 });
-      }
-      const games = (await response.json()) as IgdbGame[];
+      const games = await igdb<IgdbGame[]>('games', searchBody(query));
       const ranked = games
         .map((game, index) => ({ game, index }))
         .sort((a, b) => (b.game.total_rating_count ?? 0) - (a.game.total_rating_count ?? 0) || a.index - b.index)
         .map(({ game }) => toResult(game));
       return Response.json({ results: ranked });
     } catch (error) {
+      if (error instanceof IgdbError) {
+        return Response.json({ error: error.message }, { status: 502 });
+      }
       return Response.json({ error: error instanceof Error ? error.message : 'Search failed' }, { status: 500 });
     }
   }),

@@ -5,16 +5,13 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GameCover } from '@/components/library/GameCover';
-import {
-  activityStatuses,
-  activityStatusLabels,
-  completionTierLabels,
-  completionTiers,
-} from '@/components/library/labels';
+import { statuses, statusLabels, tierLabels, tiers } from '@/components/library/labels';
 import { Chip } from '@/components/ui/Chip';
 import { Text } from '@/components/ui/Text';
-import { removeGame, setActivityStatus, setCompletionTier, setPlatformOwned, useGame } from '@/db/library';
-import { usePlatforms } from '@/db/platforms';
+import { removeGame, setPlatformOwned, setStatus, setTier, useGame } from '@/db/library';
+import { useGamePlatforms } from '@/db/platforms';
+import { usePlaytime } from '@/db/sessions';
+import { formatMinutes } from '@/lib/duration';
 import { layout, opacity, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -43,13 +40,15 @@ export const GameDetailView = ({ id }: Props) => {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const game = useGame(id);
-  const platforms = usePlatforms() ?? [];
+  const platforms = useGamePlatforms(id) ?? [];
+  const playtime = usePlaytime(id);
 
   if (!game) {
     return <View style={[styles.fill, { backgroundColor: color.bg.screen }]} />;
   }
 
-  const tiers = completionTiers.filter((tier) => tier !== 'mastered' || game.canMaster || game.completionTier === tier);
+  const tierChoices = tiers.filter((tier) => tier !== 'platinum' || game.canEarnPlatinum || game.tier === tier);
+  const subtitle = [game.developer, game.releaseYear].filter(Boolean).join(' · ');
 
   const confirmRemove = () => {
     Alert.alert(`Remove ${game.title}?`, 'It will be removed from your library.', [
@@ -75,29 +74,40 @@ export const GameDetailView = ({ id }: Props) => {
           <GameCover title={game.title} coverImageId={game.coverImageId} />
         </View>
         <Text variant="gameTitle" style={styles.title}>{game.title}</Text>
-        {game.releaseYear !== null && (
-          <Text variant="subhead" tone="secondary">{game.releaseYear}</Text>
+        {subtitle !== '' && (
+          <Text variant="subhead" tone="secondary">{subtitle}</Text>
         )}
       </View>
 
+      {playtime && playtime.totalMinutes > 0 && (
+        <Section title="Playtime">
+          <View style={styles.playtime}>
+            <Text variant="title2">{formatMinutes(playtime.totalMinutes)}</Text>
+            <Text variant="subhead" tone="secondary">
+              {playtime.platforms.map((platform) => `${platform.shortName} ${formatMinutes(platform.minutes)}`).join(' · ')}
+            </Text>
+          </View>
+        </Section>
+      )}
+
       <Section title="Status">
-        {activityStatuses.map((status) => (
+        {statuses.map((status) => (
           <Chip
             key={status}
-            label={activityStatusLabels[status]}
-            selected={game.activityStatus === status}
-            onPress={() => setActivityStatus(db, game.id, status)}
+            label={statusLabels[status]}
+            selected={game.status === status}
+            onPress={() => setStatus(db, game.id, status)}
           />
         ))}
       </Section>
 
       <Section title="Completion">
-        {tiers.map((tier) => (
+        {tierChoices.map((tier) => (
           <Chip
             key={tier}
-            label={completionTierLabels[tier]}
-            selected={game.completionTier === tier}
-            onPress={() => setCompletionTier(db, game.id, game.completionTier === tier ? null : tier)}
+            label={tierLabels[tier]}
+            selected={game.tier === tier}
+            onPress={() => setTier(db, game.id, game.tier === tier ? null : tier)}
           />
         ))}
       </Section>
@@ -162,6 +172,9 @@ const styles = StyleSheet.create({
     padding: space[16],
     borderRadius: radius.lg,
     borderCurve: 'continuous',
+  },
+  playtime: {
+    gap: space[4],
   },
   remove: {
     alignItems: 'center',

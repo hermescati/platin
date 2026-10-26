@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTabBarInset } from 'expo-lucent';
 
-import { activityStatusLabels } from '@/components/library/labels';
+import { statusLabels } from '@/components/library/labels';
 import { SearchResultRow } from '@/components/search/SearchResultRow';
 import { useCatalogSearch } from '@/components/search/useCatalogSearch';
 import { Text } from '@/components/ui/Text';
@@ -23,7 +23,7 @@ export const SearchResults = ({ query }: Props) => {
   const catalog = useCatalogSearch(query);
   const needle = query.trim().toLowerCase();
   const libraryMatches = (library ?? []).filter((game) => game.title.toLowerCase().includes(needle));
-  const owned = new Map((library ?? []).filter((game) => game.igdbId !== null).map((game) => [game.igdbId, game]));
+  const owned = new Map((library ?? []).map((game) => [game.igdbId, game]));
 
   return (
     <Animated.ScrollView
@@ -40,7 +40,7 @@ export const SearchResults = ({ query }: Props) => {
               key={game.id}
               title={game.title}
               coverImageId={game.coverImageId}
-              detail={[activityStatusLabels[game.activityStatus], game.platforms].filter(Boolean).join(' · ')}
+              detail={[statusLabels[game.status], game.platforms].filter(Boolean).join(' · ')}
               onPress={() => openGame(game.id)}
             />
           ))}
@@ -61,7 +61,7 @@ export const SearchResults = ({ query }: Props) => {
             coverImageId={game.coverId}
             detail={
               entry
-                ? `In library · ${activityStatusLabels[entry.activityStatus]}`
+                ? `In library · ${statusLabels[entry.status]}`
                 : [game.releaseYear, game.platforms.slice(0, 3).join(', ')].filter(Boolean).join(' · ')
             }
             onPress={() => (entry ? openGame(entry.id) : addGame(game))}

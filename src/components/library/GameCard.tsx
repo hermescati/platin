@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { GameCover } from '@/components/library/GameCover';
-import { activityStatusLabels, completionTierLabels } from '@/components/library/labels';
+import { statusLabels, tierLabels } from '@/components/library/labels';
 import { Text } from '@/components/ui/Text';
 import type { LibraryGame } from '@/db/types';
 import { opacity, space } from '@/theme/tokens';
@@ -13,8 +13,8 @@ interface Props {
 }
 
 export const GameCard = ({ game, width }: Props) => {
-  const meta = [game.platforms, activityStatusLabels[game.activityStatus]].filter(Boolean).join(' · ');
-  const badge = game.completionTier ? completionTierLabels[game.completionTier] : undefined;
+  const meta = [game.platforms, statusLabels[game.status]].filter(Boolean).join(' · ');
+  const badge = game.tier ? tierLabels[game.tier] : undefined;
 
   return (
     <Pressable

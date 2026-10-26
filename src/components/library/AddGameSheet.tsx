@@ -1,18 +1,19 @@
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GameCover } from '@/components/library/GameCover';
-import { activityStatuses, activityStatusLabels } from '@/components/library/labels';
+import { statuses, statusLabels, tierLabels } from '@/components/library/labels';
 import { Chip } from '@/components/ui/Chip';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Text } from '@/components/ui/Text';
-import { addCatalogGame } from '@/db/library';
-import { platformIdsFromIgdb, usePlatforms } from '@/db/platforms';
-import type { ActivityStatus } from '@/db/types';
+import { addCatalogGame, findRemovedGame, restoreGame } from '@/db/library';
+import { usePlatformsByIds, useUserPlatformIds } from '@/db/platforms';
+import type { GameStatus } from '@/db/types';
 import type { CatalogGame } from '@/lib/catalog';
+import { formatMinutes } from '@/lib/duration';
 import { layout, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -24,21 +25,52 @@ export const AddGameSheet = ({ game }: Props) => {
   const { color } = useTheme();
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
-  const platforms = usePlatforms() ?? [];
-  const gamePlatformIds = platformIdsFromIgdb(game.platforms);
-  const choices = gamePlatformIds.length > 0 ? platforms.filter((p) => gamePlatformIds.includes(p.id)) : platforms;
-  const [status, setStatus] = useState<ActivityStatus>('backlog');
-  const [selected, setSelected] = useState<string[]>(gamePlatformIds.length === 1 ? gamePlatformIds : []);
+  const choices = usePlatformsByIds(game.platformIds) ?? [];
+  const userPlatformIds = useUserPlatformIds() ?? [];
+  const yours = choices.filter((platform) => userPlatformIds.includes(platform.id));
+  const suggested = yours.length === 1 ? [yours[0].id] : choices.length === 1 ? [choices[0].id] : [];
+  const [status, setStatus] = useState<GameStatus>('backlog');
+  const [picked, setPicked] = useState<number[] | null>(null);
   const [saving, setSaving] = useState(false);
+  const selected = picked ?? suggested;
 
-  const togglePlatform = (id: string) => {
-    setSelected((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+  const togglePlatform = (id: number) => {
+    setPicked(selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]);
+  };
+
+  const addFresh = async () => {
+    await addCatalogGame(db, game, status, status === 'wishlist' ? [] : selected);
+    router.back();
   };
 
   const add = async () => {
     setSaving(true);
-    await addCatalogGame(db, game, status, selected);
-    router.back();
+    const removed = await findRemovedGame(db, game.id);
+    if (!removed) {
+      await addFresh();
+      return;
+    }
+    const summary = [
+      removed.totalMinutes > 0 ? formatMinutes(removed.totalMinutes) : null,
+      removed.tier ? tierLabels[removed.tier] : null,
+      removed.platforms,
+      removed.addons > 0 ? `${removed.addons} add-on${removed.addons === 1 ? '' : 's'}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    Alert.alert(`You played ${game.name} before`, summary || 'Your old status and dates are still here.', [
+      { text: 'Start fresh', style: 'destructive', onPress: addFresh },
+      {
+        text: 'Restore',
+        style: 'default',
+        isPreferred: true,
+        onPress: async () => {
+          await restoreGame(db, removed.id);
+          router.back();
+        },
+      },
+    ]);
+    setSaving(false);
   };
 
   return (
@@ -59,17 +91,17 @@ export const AddGameSheet = ({ game }: Props) => {
 
       <Text variant="eyebrow" tone="secondary" style={styles.section}>Status</Text>
       <View style={styles.chips}>
-        {activityStatuses.map((value) => (
+        {statuses.map((value) => (
           <Chip
             key={value}
-            label={activityStatusLabels[value]}
+            label={statusLabels[value]}
             selected={status === value}
             onPress={() => setStatus(value)}
           />
         ))}
       </View>
 
-      {choices.length > 0 && (
+      {status !== 'wishlist' && choices.length > 0 && (
         <>
           <Text variant="eyebrow" tone="secondary" style={styles.section}>Platforms</Text>
           <View style={styles.chips}>
