@@ -14,6 +14,7 @@ interface IgdbGame {
   total_rating_count?: number;
   game_type?: { type: string };
   parent_game?: { id: number; name: string; cover?: { image_id: string } };
+  involved_companies?: { company: { name: string }; developer: boolean }[];
 }
 
 const RESULT_LIMIT = 20;
@@ -24,7 +25,7 @@ const searchBody = (query: string) => {
   const escaped = query.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   return [
     `search "${escaped}";`,
-    'fields name, slug, cover.image_id, first_release_date, platforms.abbreviation, platforms.name, total_rating, total_rating_count, game_type.type, parent_game.name, parent_game.cover.image_id;',
+    'fields name, slug, cover.image_id, first_release_date, platforms.abbreviation, platforms.name, total_rating, total_rating_count, game_type.type, parent_game.name, parent_game.cover.image_id, involved_companies.company.name, involved_companies.developer;',
     'where version_parent = null;',
     `limit ${RESULT_LIMIT};`,
   ].join(' ');
@@ -41,6 +42,7 @@ const toResult = (game: IgdbGame) => ({
   platformIds: (game.platforms ?? []).map((platform) => platform.id),
   rating: game.total_rating ? Math.round(game.total_rating) : null,
   type: game.game_type?.type ?? null,
+  developer: game.involved_companies?.find((company) => company.developer)?.company.name ?? null,
   parent: game.parent_game
     ? { id: game.parent_game.id, name: game.parent_game.name, coverId: game.parent_game.cover?.image_id ?? null }
     : null,

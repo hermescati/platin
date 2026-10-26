@@ -446,4 +446,12 @@ export const migrations: string[] = [
     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
   WHERE default_key = 'story_world';
   `,
+  `
+  CREATE TABLE recent_searches (
+    query TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+    searched_at TEXT NOT NULL
+  );
+
+  CREATE INDEX recent_searches_searched_at ON recent_searches (searched_at);
+  `,
 ];

@@ -25,6 +25,8 @@ export interface LibraryGame {
   igdbId: number;
   title: string;
   coverImageId: string | null;
+  releaseYear: number | null;
+  gameType: string | null;
   status: GameStatus;
   tier: Tier | null;
   platforms: string | null;

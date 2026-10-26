@@ -28,6 +28,8 @@ const fetchLibrary = (db: SQLiteDatabase) =>
       l.igdb_id AS igdbId,
       c.name AS title,
       c.cover_image_id AS coverImageId,
+      CAST(strftime('%Y', c.release_date, 'unixepoch') AS INTEGER) AS releaseYear,
+      c.game_type AS gameType,
       l.status,
       l.tier,
       (

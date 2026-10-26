@@ -1,27 +1,27 @@
 import { NativeTabs } from 'expo-lucent';
 
-import { primaryTabs, searchTab } from '@/components/navigation/tabs';
-import { SearchQueryProvider } from '@/components/search/SearchQuery';
+import { glyphMarkup } from '@/components/icon/glyphMarkup';
+import { primaryTabs, searchTab, type TabConfig } from '@/components/navigation/tabs';
 import { useTheme } from '@/theme/useTheme';
+
+const tabIcon = (tab: TabConfig) => ({ default: glyphMarkup(tab.glyph), selected: glyphMarkup(tab.glyph, 'fill') });
 
 const TabsLayout = () => {
   const { color } = useTheme();
 
   return (
-    <SearchQueryProvider>
-      <NativeTabs tintColor={color.accent.default} minimizeBehavior="onScrollDown">
-        {primaryTabs.map((tab) => (
-          <NativeTabs.Trigger key={tab.name} name={tab.name}>
-            <NativeTabs.Trigger.Label>{tab.label}</NativeTabs.Trigger.Label>
-            <NativeTabs.Trigger.Icon src={tab.image} renderingMode="template" />
-          </NativeTabs.Trigger>
-        ))}
-        <NativeTabs.Trigger name={searchTab.name} role="search">
-          <NativeTabs.Trigger.Label>{searchTab.label}</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={searchTab.image} renderingMode="template" />
+    <NativeTabs tintColor={color.accent.default} minimizeBehavior="onScrollDown">
+      {primaryTabs.map((tab) => (
+        <NativeTabs.Trigger key={tab.name} name={tab.name}>
+          <NativeTabs.Trigger.Label>{tab.label}</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon svg={tabIcon(tab)} />
         </NativeTabs.Trigger>
-      </NativeTabs>
-    </SearchQueryProvider>
+      ))}
+      <NativeTabs.Trigger name={searchTab.name} role="search">
+        <NativeTabs.Trigger.Label>{searchTab.label}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon svg={tabIcon(searchTab)} />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 };
 

@@ -1,10 +1,16 @@
 import { SearchBar } from 'expo-lucent';
+import { useSQLiteContext } from 'expo-sqlite';
 
 import { searchPlaceholder } from '@/components/navigation/tabs';
-import { useSearchQuery } from '@/components/search/SearchQuery';
+import { saveRecentSearch } from '@/db/recentSearches';
 
 export const SearchField = () => {
-  const { setQuery } = useSearchQuery();
+  const db = useSQLiteContext();
 
-  return <SearchBar placeholder={searchPlaceholder} onChangeText={(event) => setQuery(event.nativeEvent.text)} />;
+  return (
+    <SearchBar
+      placeholder={searchPlaceholder}
+      onSearchButtonPress={(event) => saveRecentSearch(db, event.nativeEvent.text)}
+    />
+  );
 };

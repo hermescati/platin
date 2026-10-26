@@ -172,6 +172,7 @@ export interface Palette {
   menu: { fill: string };
   cover: { badge: string; edge: string };
   shadow: { lifted: string; glass: string; floating: string; floatingNear: string; floatingHighlight: string };
+  toast: { top: string; bottom: string; rim: string };
   heat: { low: string; mid: string; high: string };
 }
 
@@ -219,6 +220,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       floatingNear: withAlpha(black, 0),
       floatingHighlight: withAlpha(white, 0.08),
     },
+    toast: { top: n[900], bottom: n[950], rim: withAlpha(white, 0.12) },
     heat: { low: withAlpha(a[500], 0.28), mid: withAlpha(a[500], 0.55), high: a[500] },
   },
   light: {
@@ -264,6 +266,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
       floatingNear: withAlpha(black, 0.08),
       floatingHighlight: withAlpha(white, 0),
     },
+    toast: { top: n[0], bottom: '#F7F7F9', rim: withAlpha(black, 0.08) },
     heat: { low: withAlpha(a[500], 0.22), mid: withAlpha(a[500], 0.5), high: a[500] },
   },
 };
@@ -280,6 +283,7 @@ export const typography = {
   subheadEmphasized: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
   footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
   footnoteEmphasized: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  listSubtitle: { fontSize: 14, lineHeight: 19, fontWeight: '400' },
   caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' },
   captionEmphasized: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
   eyebrow: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase' },
@@ -321,7 +325,7 @@ export const icon = {
   knockoutScale: 1.1,
 } as const;
 
-export const opacity = { pressed: 0.7, disabled: 0.5 } as const;
+export const opacity = { pressed: 0.7, disabled: 0.5, coverGlow: 0.35, coverShadow: 0.75, skeleton: 0.5, glowStrong: 0.22, glowFaint: 0.06 } as const;
 
 export const layout = {
   hairline: 1,
@@ -331,7 +335,26 @@ export const layout = {
   searchCoverWidth: 48,
   sheetCoverWidth: 72,
   detailCoverWidth: 160,
+  glassButton: { medium: 44, large: 56 },
+  menuWidth: 264,
+  menuRow: 44,
+  menuIconSlot: 26,
+  toastHeight: 56,
+  toastWithSubHeight: 64,
+  toastMaxWidth: 358,
+  topResultCover: { width: 84, height: 112 },
+  suggestionThumb: { width: 40, height: 54 },
+  coverPillHeight: 20,
+  coverStatusSize: 24,
+  fadeEdge: 16,
+  illustration: { width: 240, height: 140, card: { width: 74, height: 98 }, circle: 64, glowSpread: 70, cardTilt: 9 },
+  skeletonLine: { small: 8, medium: 10, large: 18 },
+  liftBottom: 48,
+  dockTop: 86,
+  searchColumns: 3,
 } as const;
+
+export const blur = { coverGlow: 40, coverShadow: 14 } as const;
 
 export const motion = {
   springs: {
@@ -344,6 +367,10 @@ export const motion = {
     celebrate: { duration: 600, dampingRatio: 0.6 },
   },
   fade: 200,
+  bob: { duration: 1600, distance: 6, delay: 300 },
+  sweep: { duration: 1800, distance: 16 },
+  pulse: 700,
+  toast: { hold: 3000, holdWithAction: 5000 },
   scale: { press: 0.97, liftCover: 1.06, liftCard: 1.03, enter: 0.95 },
   stagger: 40,
 } as const;

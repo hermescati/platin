@@ -99,7 +99,7 @@ export const knownPlatformIds = async (db: SQLiteDatabase, ids: number[]) => {
   return rows.map((row) => row.id);
 };
 
-const fetchPlatformsByIds = async (db: SQLiteDatabase, ids: number[]) => {
+export const fetchPlatformsByIds = async (db: SQLiteDatabase, ids: number[]) => {
   if (ids.length === 0) {
     return [];
   }
@@ -142,7 +142,7 @@ export const useGamePlatforms = (gameId: string) => {
   return useLiveQuery(query, platformTables);
 };
 
-const fetchUserPlatformIds = async (db: SQLiteDatabase) => {
+export const fetchUserPlatformIds = async (db: SQLiteDatabase) => {
   const rows = await db.getAllAsync<{ id: number }>(
     'SELECT platform_id AS id FROM user_platforms WHERE deleted_at IS NULL',
   );

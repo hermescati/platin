@@ -16,6 +16,7 @@ const idle: CatalogSearchState = { query: '', results: [], loading: false, error
 export const useCatalogSearch = (rawQuery: string) => {
   const query = rawQuery.trim();
   const [state, setState] = useState<CatalogSearchState>(idle);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (query.length < catalogMinQuery) {
@@ -42,10 +43,11 @@ export const useCatalogSearch = (rawQuery: string) => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, attempt]);
 
+  const retry = () => setAttempt((value) => value + 1);
   if (query.length < catalogMinQuery) {
-    return idle;
+    return { ...idle, retry };
   }
-  return state.query === query ? state : { ...state, loading: true };
+  return { ...(state.query === query ? state : { ...state, loading: true }), retry };
 };

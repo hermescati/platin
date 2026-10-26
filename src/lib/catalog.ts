@@ -17,6 +17,7 @@ export interface CatalogGame {
   platformIds: number[];
   rating: number | null;
   type: string | null;
+  developer: string | null;
   parent: CatalogParent | null;
 }
 

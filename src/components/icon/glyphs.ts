@@ -329,6 +329,15 @@ export const glyphs = {
     },
   },
   minus: { outline: { strokes: [{ kind: 'path', d: 'M5.5 12h13' }] } },
+  backlog: {
+    outline: {
+      strokes: [
+        { kind: 'path', d: 'M4.5 7h9M4.5 12h9M4.5 17h5' },
+        { kind: 'path', d: 'M16 13.5v6l4.75-3z' },
+      ],
+    },
+  },
+  arrowUpLeft: { outline: { strokes: [{ kind: 'path', d: 'M17 17 7 7M7 15V7h8' }] } },
 } as const satisfies Record<string, Glyph>;
 
 export type IconName = keyof typeof glyphs;
