@@ -454,4 +454,13 @@ export const migrations: string[] = [
 
   CREATE INDEX recent_searches_searched_at ON recent_searches (searched_at);
   `,
+  `
+  CREATE TABLE discover_cache (
+    id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+    input TEXT NOT NULL,
+    beaten_title TEXT,
+    data TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+  );
+  `,
 ];

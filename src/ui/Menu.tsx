@@ -19,7 +19,7 @@ export interface MenuItem {
 interface Props {
   title?: string;
   items: MenuItem[];
-  selected?: string;
+  selected?: string | string[];
   onSelect: (key: string) => void;
 }
 
@@ -34,7 +34,7 @@ export const Menu = ({ title, items, selected, onSelect }: Props) => {
         <View style={styles.edge} />
       )}
       {items.map((item, index) => {
-        const isSelected = item.key === selected;
+        const isSelected = Array.isArray(selected) ? selected.includes(item.key) : item.key === selected;
         const tint = item.destructive ? color.status.danger : isSelected ? color.accent.default : color.text.primary;
         return (
           <Fragment key={item.key}>

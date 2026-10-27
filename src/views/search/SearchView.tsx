@@ -2,27 +2,45 @@ import { TabScrollView, useTabBarInset, useTabSearch } from 'expo-lucent';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useDiscover } from '@/db/discover';
 import { useLibrary } from '@/db/library';
-import { saveRecentSearch, useRecentSearches } from '@/db/recentSearches';
+import { saveRecentSearch } from '@/db/recentSearches';
 import { catalogMinQuery, type CatalogGame } from '@/lib/catalog';
 import { isAddon, statusIcons, statusLabels, typeBadge } from '@/shared/game/labels';
 import { openCatalogGame, openGame } from '@/shared/game/routes';
 import { useQuickAdd } from '@/shared/game/hooks/useQuickAdd';
 import { layout, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
+import { EdgeFade } from '@/ui/EdgeFade';
 import { SectionHeader } from '@/ui/SectionHeader';
 import { Toast, type ToastData } from '@/ui/Toast';
-import { RecentList } from '@/views/search/components/RecentList';
+import { Discover } from '@/views/search/components/Discover';
+import { DiscoverSkeleton } from '@/views/search/components/DiscoverSkeleton';
 import { ResultTile } from '@/views/search/components/ResultTile';
 import { ResultsSkeleton } from '@/views/search/components/ResultsSkeleton';
+import {
+  defaultFilters,
+  quickFilters,
+  toggleFilter,
+  type FilterKey,
+  type FilterValues,
+} from '@/views/search/utils/quickFilters';
 import { resultMeta } from '@/views/search/utils/resultMeta';
 import { SearchField } from '@/views/search/components/SearchField';
+import { QuickFilters } from '@/views/search/components/QuickFilters';
+import { SearchHeader } from '@/views/search/components/SearchHeader';
 import { SearchMessage } from '@/views/search/components/SearchMessage';
 import { SearchOverlay, type Anchor } from '@/views/search/components/SearchOverlay';
 import { SuggestionList } from '@/views/search/components/SuggestionList';
 import { TopResultCard, type TopResultAccessory } from '@/views/search/components/TopResultCard';
 import { useCatalogSearch } from '@/views/search/hooks/useCatalogSearch';
+
+interface FilterMenu {
+  key: FilterKey;
+  anchor: Anchor;
+}
 
 interface Presentation {
   anchor?: Anchor;
@@ -35,16 +53,19 @@ export const SearchView = () => {
   const db = useSQLiteContext();
   const { color } = useTheme();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const dockTop = Math.max(tabBarInset, layout.dockTop);
-  const { query, isFocused, setText } = useTabSearch();
+  const { query, setText } = useTabSearch();
   const trimmed = query.trim();
   const library = useLibrary();
-  const recents = useRecentSearches();
   const catalog = useCatalogSearch(query);
+  const { discover, failed: discoverFailed, retry: retryDiscover } = useDiscover();
   const [presentation, setPresentation] = useState<Presentation>({});
   const [toast, setToast] = useState<ToastData | null>(null);
   const [added, setAdded] = useState<number[]>([]);
+  const [filters, setFilters] = useState<FilterValues>(defaultFilters);
+  const [filterMenu, setFilterMenu] = useState<FilterMenu | null>(null);
   const rootRef = useRef<ComponentRef<typeof View>>(null);
   const plusRef = useRef<ComponentRef<typeof View>>(null);
 
@@ -119,9 +140,42 @@ export const SearchView = () => {
     });
   };
 
+  const openFilter = (key: FilterKey, target: ComponentRef<typeof View>) => {
+    const root = rootRef.current;
+    if (!root) {
+      return;
+    }
+    root.measureInWindow((rootX, rootY) => {
+      target.measureInWindow((x, y, targetWidth, targetHeight) => {
+        setFilterMenu({ key, anchor: { x: x - rootX, y: y - rootY, width: targetWidth, height: targetHeight, align: 'left' } });
+      });
+    });
+  };
+
+  const activeFilter = filterMenu ? quickFilters.find((filter) => filter.key === filterMenu.key) : undefined;
+
+  const chooseFilter = (option: string) => {
+    if (!activeFilter) {
+      return;
+    }
+    setFilters((current) => toggleFilter(activeFilter, current, option));
+    if (!activeFilter.multi) {
+      setFilterMenu(null);
+    }
+  };
+
   const lift = (game: CatalogGame, kind: 'card' | 'tile') => {
     setPresentation({ lift: kind });
     quickAdd.open({ game, entry: entries.get(game.id) });
+  };
+
+  const save = (game: CatalogGame) => {
+    const entry = entries.get(game.id);
+    if (entry) {
+      openGame(entry.id);
+    } else {
+      quickAdd.add(game, 'wishlist', []);
+    }
   };
 
   const accessoryFor = (game: CatalogGame): TopResultAccessory =>
@@ -169,16 +223,28 @@ export const SearchView = () => {
 
   const renderBody = () => {
     if (trimmed.length < catalogMinQuery) {
-      if (isFocused && recents && recents.length > 0) {
-        return <RecentList recents={recents} onPick={setText} />;
+      if (discover) {
+        return (
+          <Discover
+            discover={discover}
+            entries={entries}
+            onOpen={open}
+            onSave={save}
+            onLongPress={(game) => lift(game, 'tile')}
+          />
+        );
       }
-      return (
-        <SearchMessage
-          icon="search"
-          title="Search everything"
-          body="Find games in your library or the full catalog to add them."
-        />
-      );
+      if (discoverFailed) {
+        return (
+          <SearchMessage
+            icon="search"
+            title="Search everything"
+            body="Find games in your library or the full catalog to add them."
+            action={{ label: 'Try again', icon: 'refresh', onPress: retryDiscover }}
+          />
+        );
+      }
+      return <DiscoverSkeleton />;
     }
     if (catalog.error) {
       return (
@@ -238,9 +304,21 @@ export const SearchView = () => {
   return (
     <View ref={rootRef} style={[styles.root, { backgroundColor: color.bg.screen }]}>
       <SearchField />
-      <TabScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+      <TabScrollView
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + space[8] }]}>
+        <SearchHeader />
+        <QuickFilters
+          values={filters}
+          openKey={filterMenu?.key ?? null}
+          onOpen={openFilter}
+          onClear={() => setFilters(defaultFilters())}
+        />
         {renderBody()}
       </TabScrollView>
+      <EdgeFade side="top" size={insets.top + space[8]} />
 
       {menu && (
         <SearchOverlay
@@ -262,6 +340,18 @@ export const SearchView = () => {
         />
       )}
 
+      {filterMenu && activeFilter && (
+        <SearchOverlay
+          title={activeFilter.title}
+          items={activeFilter.options}
+          selected={filters[activeFilter.key]}
+          bottom={dockTop}
+          anchor={filterMenu.anchor}
+          onSelect={chooseFilter}
+          onClose={() => setFilterMenu(null)}
+        />
+      )}
+
       <Toast toast={toast} bottom={dockTop + space.aboveDock} onHide={hideToast} />
     </View>
   );
@@ -273,7 +363,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: space.gutter,
-    paddingTop: space[8],
     paddingBottom: space[32],
     gap: space[32],
   },

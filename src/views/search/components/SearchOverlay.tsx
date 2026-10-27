@@ -11,12 +11,13 @@ export interface Anchor {
   y: number;
   width: number;
   height: number;
+  align?: 'left' | 'right';
 }
 
 interface Props {
   title: string;
   items: MenuItem[];
-  selected?: string;
+  selected?: string | string[];
   bottom: number;
   anchor?: Anchor;
   lifted?: ReactNode;
@@ -56,7 +57,7 @@ export const SearchOverlay = ({ title, items, selected, bottom, anchor, lifted, 
         <View
           style={[
             styles.anchored,
-            { right: width - (anchor.x + anchor.width) },
+            anchor.align === 'left' ? { left: Math.min(anchor.x, width - layout.menuWidth - space.gutter) } : { right: width - (anchor.x + anchor.width) },
             fits ? { top: below } : { bottom: height - anchor.y + space.popover },
           ]}>
           {menu}

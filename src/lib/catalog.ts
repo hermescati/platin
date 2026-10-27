@@ -48,3 +48,29 @@ export const fetchCatalogGames = async (ids: number[]) =>
 
 export const fetchPlatforms = async () =>
   (await callFunction<{ platforms: PlatformRecord[] }>('igdb-platforms', {})).platforms;
+
+export interface FeaturedGame {
+  tag: string;
+  game: CatalogGame;
+}
+
+export interface FranchiseGame extends CatalogGame {
+  franchise: string | null;
+}
+
+export interface DiscoverInput {
+  platformIds: number[];
+  wishlistIds: number[];
+  similarIds: number[];
+  franchiseIds: number[];
+  collectionIds: number[];
+}
+
+export interface DiscoverFeed {
+  featured: FeaturedGame[];
+  similar: CatalogGame[];
+  franchise: FranchiseGame[];
+  topRated: CatalogGame[];
+}
+
+export const fetchDiscover = (input: DiscoverInput) => callFunction<DiscoverFeed>('igdb-discover', input);

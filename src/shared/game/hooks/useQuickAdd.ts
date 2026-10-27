@@ -103,5 +103,5 @@ export const useQuickAdd = ({ onAdded, onMessage }: Options) => {
         ? ownedStatusItems
         : addStatusItems;
 
-  return { menu, open, close, select, title, items, selected: menu?.entry?.status };
+  return { menu, open, close, select, add, title, items, selected: menu?.entry?.status };
 };

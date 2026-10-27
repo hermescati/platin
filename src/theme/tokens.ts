@@ -352,7 +352,13 @@ export const layout = {
   liftBottom: 48,
   dockTop: 86,
   searchColumns: 3,
+  shelfTile: 132,
+  pullDown: 40,
+  rowFade: 40,
+  carousel: { peek: 14.5, slots: 5, scaleStep: 0.05, swing: 1, dotSize: 6, dotActive: 28 },
 } as const;
+
+export const carouselDim = [0, 0.45, 0.62, 0.74, 0.84] as const;
 
 export const blur = { coverGlow: 40, coverShadow: 14 } as const;
 
@@ -373,6 +379,7 @@ export const motion = {
   toast: { hold: 3000, holdWithAction: 5000 },
   scale: { press: 0.97, liftCover: 1.06, liftCard: 1.03, enter: 0.95 },
   stagger: 40,
+  autoplay: 5000,
 } as const;
 
 export const cover = {
@@ -389,4 +396,11 @@ export const cover = {
   text: palette.neutral[0],
   icon: withAlpha(palette.neutral[0], 0.35),
   badge: withAlpha(palette.neutral[1000], 0.55),
+  scrim: palette.neutral[1000],
+  scrimStops: [
+    { offset: 0.38, opacity: 0 },
+    { offset: 0.62, opacity: 0.55 },
+    { offset: 1, opacity: 0.92 },
+  ],
+  textSecondary: withAlpha(palette.neutral[0], 0.72),
 } as const;

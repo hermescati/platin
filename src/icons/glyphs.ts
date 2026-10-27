@@ -6,6 +6,19 @@ export const glyphs = {
   close: { outline: { strokes: [{ kind: 'path', d: 'm7 7 10 10M17 7 7 17' }] } },
   chevronDown: { outline: { strokes: [{ kind: 'path', d: 'm7 10 5 5 5-5' }] } },
   chevronRight: { outline: { strokes: [{ kind: 'path', d: 'm10 7 5 5-5 5' }] } },
+  play: {
+    outline: { strokes: [{ kind: 'path', d: 'M7.5 5.6v12.8a.9.9 0 0 0 1.37.77l10.3-6.4a.9.9 0 0 0 0-1.54l-10.3-6.4a.9.9 0 0 0-1.37.77z' }] },
+    fill: { shapes: [{ kind: 'path', d: 'M7 4.8v14.4a1 1 0 0 0 1.5.86l11.6-7.2a1 1 0 0 0 0-1.72L8.5 3.94A1 1 0 0 0 7 4.8z' }] },
+  },
+  pause: {
+    outline: { strokes: [{ kind: 'path', d: 'M8 5v14M16 5v14' }] },
+    fill: {
+      shapes: [
+        { kind: 'rect', x: 6, y: 4, width: 4, height: 16, rx: 1.5 },
+        { kind: 'rect', x: 14, y: 4, width: 4, height: 16, rx: 1.5 },
+      ],
+    },
+  },
   back: { outline: { strokes: [{ kind: 'path', d: 'm14.5 6.5-5.5 5.5 5.5 5.5' }] } },
   search: {
     outline: { strokes: [{ kind: 'circle', cx: 10.75, cy: 10.75, r: 6.25 }, { kind: 'path', d: 'm15.5 15.5 4 4' }] },
