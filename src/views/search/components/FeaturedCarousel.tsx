@@ -94,6 +94,10 @@ const Card = ({ item, index, count, front, progress, cardWidth, onPress, onSave 
     };
   });
 
+  const saveVisibility = useAnimatedStyle(() => ({
+    opacity: interpolate(Math.abs(index - progress.get()), [0, 1], [1, 0], Extrapolation.CLAMP),
+  }));
+
   const dim = useAnimatedStyle(() => ({
     opacity: interpolate(Math.abs(index - progress.get()), dimSteps, [...carouselDim], Extrapolation.CLAMP),
   }));
@@ -120,13 +124,15 @@ const Card = ({ item, index, count, front, progress, cardWidth, onPress, onSave 
             </Text>
             <Text variant="gameTitle" numberOfLines={3} style={{ color: cover.text }}>{item.title}</Text>
           </View>
-          <GlassButton
-            label={item.saved ? 'In your library' : 'Add to wishlist'}
-            icon="bookmark"
-            iconVariant={item.saved ? 'fill' : 'outline'}
-            iconOnly
-            onPress={onSave}
-          />
+          <Animated.View style={saveVisibility} pointerEvents={front ? 'auto' : 'none'}>
+            <GlassButton
+              label={item.saved ? 'In your library' : 'Add to wishlist'}
+              icon="bookmark"
+              iconVariant={item.saved ? 'fill' : 'outline'}
+              iconOnly
+              onPress={onSave}
+            />
+          </Animated.View>
         </View>
       </Pressable>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color.bg.screen }, dim]} />
