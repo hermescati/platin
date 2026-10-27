@@ -5,7 +5,7 @@ import { LucentProvider } from 'expo-lucent';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
-import { detailScreenOptions } from '@/components/navigation/detailScreenOptions';
+import { detailScreenOptions } from '@/navigation/detailScreenOptions';
 import { DatabaseProvider } from '@/db/DatabaseProvider';
 import { fonts } from '@/theme/fonts';
 import { lucentColors } from '@/theme/lucent';

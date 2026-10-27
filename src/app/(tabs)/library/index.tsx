@@ -1,22 +1,12 @@
 import { Stack } from 'expo-router';
 
-import { EmptyState } from '@/components/EmptyState';
-import { LibraryGrid } from '@/components/library/LibraryGrid';
-import { useLibrary } from '@/db/library';
+import { LibraryView } from '@/views/library/LibraryView';
 
-const LibraryScreen = () => {
-  const games = useLibrary();
-
-  return (
-    <>
-      <Stack.Screen options={{ title: 'Library' }} />
-      {games?.length === 0 ? (
-        <EmptyState title="Your library is empty" description="Search for a game to add it to your backlog or wishlist." />
-      ) : (
-        <LibraryGrid games={games ?? []} />
-      )}
-    </>
-  );
-};
+const LibraryScreen = () => (
+  <>
+    <Stack.Screen options={{ title: 'Library' }} />
+    <LibraryView />
+  </>
+);
 
 export default LibraryScreen;

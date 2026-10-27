@@ -1,11 +1,11 @@
 import { Stack } from 'expo-router';
 
-import { EmptyState } from '@/components/EmptyState';
+import { ProfileView } from '@/views/profile/ProfileView';
 
 const ProfileScreen = () => (
   <>
     <Stack.Screen options={{ title: 'Profile' }} />
-    <EmptyState title="No stats yet" description="XP, streaks and your year in games will show up here." />
+    <ProfileView />
   </>
 );
 

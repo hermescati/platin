@@ -1,4 +1,4 @@
-import { TabStack } from '@/components/navigation/TabStack';
+import { TabStack } from '@/navigation/TabStack';
 
 const TabStackLayout = () => <TabStack />;
 

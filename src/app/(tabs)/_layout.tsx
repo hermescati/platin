@@ -1,7 +1,7 @@
 import { NativeTabs } from 'expo-lucent';
 
-import { glyphMarkup } from '@/components/icon/glyphMarkup';
-import { primaryTabs, searchTab, type TabConfig } from '@/components/navigation/tabs';
+import { glyphMarkup } from '@/icons/glyphMarkup';
+import { primaryTabs, searchTab, type TabConfig } from '@/navigation/tabs';
 import { useTheme } from '@/theme/useTheme';
 
 const tabIcon = (tab: TabConfig) => ({ default: glyphMarkup(tab.glyph), selected: glyphMarkup(tab.glyph, 'fill') });

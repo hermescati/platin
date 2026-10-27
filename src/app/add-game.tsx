@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { AddGameSheet } from '@/components/library/AddGameSheet';
+import { AddGameSheet } from '@/views/add-game/AddGameSheet';
 import type { CatalogGame } from '@/lib/catalog';
 
 const AddGameScreen = () => {

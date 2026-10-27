@@ -1,13 +1,11 @@
 import { Stack } from 'expo-router';
 
-import { SearchField } from '@/components/search/SearchField';
-import { SearchResults } from '@/components/search/SearchResults';
+import { SearchView } from '@/views/search/SearchView';
 
 const SearchScreen = () => (
   <>
     <Stack.Screen options={{ title: 'Search' }} />
-    <SearchField />
-    <SearchResults />
+    <SearchView />
   </>
 );
 
